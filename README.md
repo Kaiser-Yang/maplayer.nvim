@@ -2,30 +2,48 @@
 
 Make Vim/Neovim key mappings work like VS Code's
 
-A basic plugin template structure for Neovim.
-
 ## Installation
 
-### Using [lazy.nvim](https://github.com/folke/lazy.nvim)
+Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ```lua
 {
-  "Kaiser-Yang/maplayer.nvim",
+  'Kaiser-Yang/maplayer.nvim',
+  config = function()
+    require('maplayer').setup({})
+  end
 }
 ```
 
-### Using [packer.nvim](https://github.com/wbthomason/packer.nvim)
+Using [packer.nvim](https://github.com/wbthomason/packer.nvim):
 
 ```lua
-use "Kaiser-Yang/maplayer.nvim"
+use {
+  'Kaiser-Yang/maplayer.nvim',
+  config = function()
+    require('maplayer').setup({})
+  end
+}
 ```
 
-### Using [vim-plug](https://github.com/junegunn/vim-plug)
+Using [vim-plug](https://github.com/junegunn/vim-plug):
 
 ```vim
 Plug 'Kaiser-Yang/maplayer.nvim'
 ```
 
-## License
+Then in your `init.lua`:
 
-MIT License - see [LICENSE](LICENSE) for details
+```lua
+require('maplayer').setup({})
+```
+
+## Configuration
+
+The plugin requires calling `setup({})` to initialize. Currently, no configuration options are available, but they will be added in the future.
+
+```lua
+require('maplayer').setup({
+  -- Configuration options will be available here in the future
+})
+```
