@@ -16,11 +16,11 @@ M.config = {
 function M.setup(opts)
   -- Merge user config with defaults
   M.config = vim.tbl_deep_extend("force", M.config, opts or {})
-  
+
   if not M.config.enabled then
     return
   end
-  
+
   -- Plugin initialization logic goes here
   -- This is where you would set up keymaps, autocmds, etc.
 end
