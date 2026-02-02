@@ -87,7 +87,7 @@ local maplayer = require("maplayer")
 maplayer.nmap("<C-s>", ":w<CR>", { desc = "Save" })
 maplayer.imap("<C-s>", "<Esc>:w<CR>a", { desc = "Save" })
 
--- Navigation
+-- Navigation (requires telescope.nvim plugin)
 maplayer.nmap("<C-p>", ":Telescope find_files<CR>", { desc = "Find files" })
 maplayer.nmap("<C-f>", ":Telescope live_grep<CR>", { desc = "Search in files" })
 

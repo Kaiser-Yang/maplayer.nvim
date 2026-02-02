@@ -27,7 +27,7 @@ end
 
 -- Helper function to create a keymap with default options
 function M.map(mode, lhs, rhs, opts)
-  opts = vim.tbl_extend("force", M.config.default_opts, opts or {})
+  opts = vim.tbl_deep_extend("force", {}, M.config.default_opts, opts or {})
   vim.keymap.set(mode, lhs, rhs, opts)
 end
 
