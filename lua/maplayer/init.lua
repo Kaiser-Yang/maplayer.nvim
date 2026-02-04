@@ -44,7 +44,7 @@ local function check_mode(mode)
   return false
 end
 
---- @return MapLayer.KeyHandlerFunc
+--- @return MapLayer.HandlerFunc
 local function condition_wrap(mode, condition, handler)
   return function()
     -- NOTE:
@@ -55,22 +55,34 @@ end
 
 --- Normalise keys in a KeySpec, making sure '<C-A>' and '<c-a>' are treated the same.
 --- @param t MapLayer.KeySpec[]
---- @return table<string, MapLayer.MergedKeySpec>
+--- @return table<string, table<string, MapLayer.MergedKeySpec>>
 local function normalise_key(t)
-  --- @type table<string, MapLayer.MergedKeySpec>
-  local res = {}
   for _, key_spec in ipairs(t) do
     key_spec.key = lower_bracket(key_spec.key)
-    key_spec.mode = key_spec.mode or 'n'
+    --- @type string[]
+    local mode_expanded = {}
+    for _, m in ipairs(util.ensure_list(key_spec.mode or 'n')) do
+      assert(type(m) == 'string')
+      if m == '' then
+        m = { 'n', 'x', 's', 'o' }
+      elseif m == 'v' then
+        m = { 's', 'x' }
+      elseif m == '!' then
+        m = { 'i', 'c' }
+      end
+      for _, mm in ipairs(util.ensure_list(m)) do
+        table.insert(mode_expanded, mm)
+      end
+    end
+    key_spec.mode = mode_expanded
     key_spec.desc = key_spec.desc or ''
     key_spec.priority = key_spec.priority or 0
+    key_spec.noremap = key_spec.noremap == nil and true or key_spec.noremap
+    key_spec.remap = key_spec.remap or false
     key_spec.condition = key_spec.condition or function() return true end
     if type(key_spec.handler) == 'string' then
-      local value = key_spec.handler
-      key_spec.handler = function()
-        ---@diagnostic disable-next-line: return-type-mismatch
-        return value
-      end
+      local value = tostring(key_spec.handler)
+      key_spec.handler = function() return value end
     end
     key_spec.handler = condition_wrap(key_spec.mode, key_spec.condition, key_spec.handler)
   end
@@ -78,31 +90,32 @@ local function normalise_key(t)
     if a.key ~= b.key then return a.key < b.key end
     return a.priority > b.priority
   end)
+  --- @type table<string, table<string, MapLayer.MergedKeySpec>>
+  local res = {} -- temp[mode][key] = MergedKeySpec
   for _, key_spec in ipairs(t) do
-    if not res[key_spec.key] then
-      res[key_spec.key] = {
-        key = key_spec.key,
-        mode = util.ensure_list(key_spec.mode),
-        desc = util.ensure_list(key_spec.desc),
-        handler = util.ensure_list(key_spec.handler),
-      }
-    else
+    local mode = key_spec.mode
+    assert(type(mode) == 'table')
+    assert(type(key_spec.handler) == 'function')
+    for _, m in ipairs(mode) do
+      assert(type(m) == 'string')
+      if not res[m] then res[m] = {} end
+      --- @type table<string, MapLayer.MergedKeySpec>
+      local tmp = res[m]
       local key = key_spec.key
-      assert(key == res[key].key)
-      for _, mode in ipairs(util.ensure_list(key_spec.mode)) do
-        table.insert(res[key].mode, mode)
-      end
-      for _, desc in ipairs(util.ensure_list(key_spec.desc)) do
-        table.insert(res[key].desc, desc)
-      end
-      for _, handler in ipairs(util.ensure_list(key_spec.handler)) do
-        table.insert(res[key].handler, handler)
+      if not tmp[key] then
+        tmp[key] = {
+          key = key,
+          mode = m,
+          desc = { key_spec.desc },
+          handler = { { handler = key_spec.handler, remap = key_spec.remap or key_spec.noremap == false } },
+        }
+      else
+        assert(key == tmp[key].key)
+        assert(m == tmp[key].mode)
+        if not vim.tbl_contains(tmp[key].desc, key_spec.desc) then table.insert(tmp[key].desc, key_spec.desc) end
+        table.insert(tmp[key].handler, { key_spec.handler, remap = key_spec.remap or key_spec.noremap == false })
       end
     end
-  end
-  for _, v in pairs(res) do
-    v.mode = util.unique(v.mode)
-    v.desc = util.unique(v.desc)
   end
   return res
 end
@@ -115,14 +128,14 @@ local function generate_opt(key_spec)
 end
 
 --- @param key_spec MapLayer.MergedKeySpec
---- @return MapLayer.KeyHandlerFunc
+--- @return MapLayer.HandlerFunc
 local function handler_wrap(key_spec)
   return function()
     local ret
     for _, handler in ipairs(key_spec.handler) do
-      ret = handler()
+      ret = handler.handler()
       if ret then
-        if type(ret) == 'string' then util.feedkeys(ret, 'nt') end
+        if type(ret) == 'string' then util.feedkeys(ret, (handler.remap and 'm' or 'n') .. 't') end
         return
       end
     end
@@ -135,8 +148,11 @@ end
 --- @return nil
 function M.setup(opt)
   opt = normalise_key(util.ensure_list(opt))
-  for _, key_spec in pairs(opt) do
-    vim.keymap.set(key_spec.mode, key_spec.key, handler_wrap(key_spec), generate_opt(key_spec))
+  for mode, spec in pairs(opt) do
+    for key, key_spec in pairs(spec) do
+      assert(key == key_spec.key)
+      vim.keymap.set(mode, key, handler_wrap(key_spec), generate_opt(key_spec))
+    end
   end
 end
 
