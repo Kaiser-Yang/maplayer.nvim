@@ -21,15 +21,22 @@ local function lower_bracket(s)
 end
 
 local m_map = {
-  n = { 'n' },
-  x = { 'v', 'V', '' },
-  v = { 'v', 'V', '', 'S' },
-  o = { 'no' },
-  c = { 'c' },
+  n = { 'n', 'niI', 'niR', 'niV', 'nt', 'ntT' },
+  x = { 'v', 'V', '', 'vs', 'Vs', 's' },
+  s = { 's', 'S', '' },
+  o = { 'no', 'nov', 'noV', 'no' },
+  i = { 'i', 'ic', 'ix' },
+  c = { 'c', 'cr', 'cv', 'cvr' },
 }
+-- INFO:
+-- This may be incorrect,
+-- because Lang-Arg mode contains modes after hitting f, F, t and T in normal mode
+m_map.l = { unpack(m_map.i), unpack(m_map.c), 'R', 'Rc', 'Rx', 'Rv', 'Rvc', 'Rvx' }
 --- @param mode string|string[]
 --- @return boolean
 local function check_mode(mode)
+  -- We do not know how to check Lang-Arg mode, just return true
+  if mode == 'l' then return true end
   local current_mode = vim.api.nvim_get_mode().mode
   for _, m in ipairs(util.ensure_list(mode)) do
     if m_map[m] and vim.tbl_contains(m_map[m], current_mode) then return true end
@@ -40,6 +47,8 @@ end
 --- @return MapLayer.KeyHandlerFunc
 local function condition_wrap(mode, condition, handler)
   return function()
+    -- NOTE:
+    -- We can not remove the check_mode here, because we can not bind only for Lang-Arg
     if check_mode(mode) and condition() then return handler() end
   end
 end
