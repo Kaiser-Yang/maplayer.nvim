@@ -10,11 +10,13 @@
 --- @field priority? integer Default to 0
 --- @field noremap? boolean Default to true
 --- @field remap? boolean Default to false
+--- @field replace_keycodes? boolean Default to true
 --- @field handler MapLayer.HandlerFunc|string
 
 --- @class MapLayer.MergedHandlerFunc
 --- @field handler MapLayer.HandlerFunc
 --- @field remap boolean
+--- @field replace_keycodes boolean
 
 --- @class MapLayer.MergedKeySpec
 --- @field key string

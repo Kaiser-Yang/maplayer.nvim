@@ -32,8 +32,13 @@ end
 
 --- @param keys string
 --- @param mode string
-function M.feedkeys(keys, mode)
-  local termcodes = vim.api.nvim_replace_termcodes(keys, true, true, true)
+--- @param replace_keycodes? boolean
+function M.feedkeys(keys, mode, replace_keycodes)
+  local termcodes = keys
+  if replace_keycodes == nil or replace_keycodes == true then
+    termcodes = vim.api.nvim_replace_termcodes(keys, true, true, true)
+  end
+
   vim.api.nvim_feedkeys(termcodes, mode, false)
 end
 

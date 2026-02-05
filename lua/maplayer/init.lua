@@ -79,6 +79,7 @@ local function normalise_key(t)
     key_spec.priority = key_spec.priority or 0
     key_spec.noremap = key_spec.noremap == nil and true or key_spec.noremap
     key_spec.remap = key_spec.remap or false
+    key_spec.replace_keycodes = key_spec.replace_keycodes == nil and true or key_spec.replace_keycodes
     key_spec.condition = key_spec.condition or function() return true end
     if type(key_spec.handler) == 'string' then
       local value = tostring(key_spec.handler)
@@ -107,7 +108,13 @@ local function normalise_key(t)
           key = key,
           mode = m,
           desc = { key_spec.desc },
-          handler = { { handler = key_spec.handler, remap = key_spec.remap or key_spec.noremap == false } },
+          handler = {
+            {
+              handler = key_spec.handler,
+              remap = key_spec.remap or key_spec.noremap == false,
+              replace_keycodes = key_spec.replace_keycodes,
+            },
+          },
         }
       else
         assert(key == tmp[key].key)
@@ -115,7 +122,11 @@ local function normalise_key(t)
         if not vim.tbl_contains(tmp[key].desc, key_spec.desc) then table.insert(tmp[key].desc, key_spec.desc) end
         table.insert(
           tmp[key].handler,
-          { handler = key_spec.handler, remap = key_spec.remap or key_spec.noremap == false }
+          {
+            handler = key_spec.handler,
+            remap = key_spec.remap or key_spec.noremap == false,
+            replace_keycodes = key_spec.replace_keycodes,
+          }
         )
       end
     end
@@ -138,7 +149,9 @@ local function handler_wrap(key_spec)
     for _, handler in ipairs(key_spec.handler) do
       ret = handler.handler()
       if ret then
-        if type(ret) == 'string' then util.feedkeys(ret, (handler.remap and 'm' or 'n') .. 't') end
+        if type(ret) == 'string' then
+          util.feedkeys(ret, (handler.remap and 'm' or 'n') .. 't', handler.replace_keycodes)
+        end
         return
       end
     end
