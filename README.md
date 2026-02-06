@@ -47,7 +47,16 @@ All without any conflicts! 🎉
   'Kaiser-Yang/maplayer.nvim',
   config = function()
     require('maplayer').setup({
-      -- Your keybinding specs here
+      {
+        key = '<leader>ff',
+        mode = 'n',
+        desc = 'Find files',
+        handler = function()
+          require('telescope.builtin').find_files()
+          return true
+        end,
+      },
+      -- Add more keybinding specs here
     })
   end
 }
@@ -60,7 +69,16 @@ use {
   'Kaiser-Yang/maplayer.nvim',
   config = function()
     require('maplayer').setup({
-      -- Your keybinding specs here
+      {
+        key = '<leader>ff',
+        mode = 'n',
+        desc = 'Find files',
+        handler = function()
+          require('telescope.builtin').find_files()
+          return true
+        end,
+      },
+      -- Add more keybinding specs here
     })
   end
 }
@@ -76,9 +94,20 @@ Then in your `init.lua`:
 
 ```lua
 require('maplayer').setup({
-  -- Your keybinding specs here
+  {
+    key = '<leader>ff',
+    mode = 'n',
+    desc = 'Find files',
+    handler = function()
+      require('telescope.builtin').find_files()
+      return true
+    end,
+  },
+  -- Add more keybinding specs here
 })
 ```
+
+> **⚠️ Important**: `setup()` and `make()` should only be called **once globally** in your configuration. Multiple calls will **overwrite** previous keybindings rather than merging them, which can cause unexpected behavior. Choose either one `setup()` call or one `make()` call for all your keybindings.
 
 ## Usage
 
@@ -178,217 +207,130 @@ The `mode` field accepts:
   - `'!'` - Insert and Command-line modes
   - `'v'` - Visual and Select modes
 
-## Examples
+## Example: A Super Super Tab
 
-### Basic Usage: Simple Keybinding
-
-```lua
-require('maplayer').setup({
-  {
-    key = '<leader>w',
-    mode = 'n',
-    desc = 'Save file',
-    handler = function()
-      vim.cmd('write')
-      return true
-    end,
-  },
-})
-```
-
-### Multiple Handlers for One Key
-
-This is where maplayer.nvim really shines - handling the same key differently based on context:
+This comprehensive example demonstrates the power of maplayer.nvim by creating an intelligent Tab key that handles multiple scenarios with proper priority ordering. This is a real-world example showing how multiple plugins can cooperate on the same key without conflicts:
 
 ```lua
 require('maplayer').setup({
-  -- Highest priority: Accept completion when popup is visible
+  -- Priority 100: Accept completion from blink.cmp
   {
-    key = '<CR>',
+    key = '<Tab>',
     mode = 'i',
     desc = 'Accept completion',
     priority = 100,
     condition = function()
-      return vim.fn.pumvisible() == 1
+      -- Check if blink.cmp completion menu is visible and item is selected
+      local blink = require('blink.cmp')
+      return blink.is_visible() and blink.get_selected_item() ~= nil
     end,
     handler = function()
-      return '<C-y>'
+      require('blink.cmp').accept()
+      return true
     end,
   },
   
-  -- Medium priority: Auto-pair brackets when completing
+  -- Priority 90: Accept AI suggestions from copilot
   {
-    key = '<CR>',
+    key = '<Tab>',
     mode = 'i',
-    desc = 'Auto-pair on completion',
-    priority = 50,
+    desc = 'Accept Copilot suggestion',
+    priority = 90,
     condition = function()
+      -- Check if copilot has a suggestion
+      return vim.fn['copilot#GetDisplayedSuggestion']().text ~= ''
+    end,
+    handler = function()
+      vim.fn['copilot#Accept']()
+      return true
+    end,
+  },
+  
+  -- Priority 80: Jump to next snippet placeholder
+  {
+    key = '<Tab>',
+    mode = 'i',
+    desc = 'Jump to next snippet placeholder',
+    priority = 80,
+    condition = function()
+      local blink = require('blink.cmp')
+      return blink.snippet_active({ direction = 1 })
+    end,
+    handler = function()
+      require('blink.cmp').snippet_forward()
+      return true
+    end,
+  },
+  
+  -- Priority 70: Jump out of brackets with tabout.nvim
+  {
+    key = '<Tab>',
+    mode = 'i',
+    desc = 'Tab out of brackets',
+    priority = 70,
+    condition = function()
+      -- Check if cursor is before a closing bracket/quote
       local line = vim.api.nvim_get_current_line()
       local col = vim.api.nvim_win_get_cursor(0)[2]
-      return line:sub(col, col) == ')'
+      local char = line:sub(col + 1, col + 1)
+      return char:match('[%)%]%}"\']') ~= nil
     end,
     handler = function()
-      return '<CR><Esc>O'
+      require('tabout').tabout()
+      return true
     end,
   },
   
-  -- Fallback: Normal Enter behavior
-  -- (no need to define, will fallback automatically)
-})
-```
-
-### Context-Aware Navigation
-
-```lua
-require('maplayer').setup({
+  -- Priority 60: Auto-indent when current line indent is less than previous line
   {
-    key = '<C-j>',
-    mode = 'n',
-    desc = 'Next item in quickfix',
-    priority = 100,
+    key = '<Tab>',
+    mode = 'i',
+    desc = 'Auto indent to match previous line',
+    priority = 60,
     condition = function()
-      return vim.fn.getqflist({winid = 0}).winid ~= 0
+      local current_line = vim.api.nvim_get_current_line()
+      local line_num = vim.api.nvim_win_get_cursor(0)[1]
+      if line_num == 1 then return false end
+      
+      local prev_line = vim.api.nvim_buf_get_lines(0, line_num - 2, line_num - 1, false)[1]
+      local current_indent = current_line:match('^%s*'):len()
+      local prev_indent = prev_line:match('^%s*'):len()
+      
+      return current_indent < prev_indent
     end,
     handler = function()
-      vim.cmd('cnext')
-      return true
+      return '<C-f>' -- Use built-in Ctrl-f for auto-indent
     end,
   },
+  
+  -- Priority 0: Default Tab behavior (insert tab or spaces)
   {
-    key = '<C-j>',
-    mode = 'n',
-    desc = 'Next diagnostic',
-    priority = 50,
-    condition = function()
-      return #vim.diagnostic.get(0) > 0
-    end,
-    handler = function()
-      vim.diagnostic.goto_next()
-      return true
-    end,
-  },
-  {
-    key = '<C-j>',
-    mode = 'n',
-    desc = 'Move down',
+    key = '<Tab>',
+    mode = 'i',
+    desc = 'Insert tab',
     priority = 0,
     handler = function()
-      return 'gj'
+      return '<Tab>'
     end,
   },
 })
 ```
 
-### LSP-Aware Keybindings
+This example showcases:
+- **Multiple handlers** for the same key with different priorities
+- **Conditional execution** based on various plugin states
+- **Fallback behavior** when no condition matches
+- **Clean separation of concerns** - each handler has a single responsibility
 
-```lua
-require('maplayer').setup({
-  {
-    key = 'K',
-    mode = 'n',
-    desc = 'LSP hover documentation',
-    condition = function()
-      return #vim.lsp.get_active_clients({ bufnr = 0 }) > 0
-    end,
-    handler = function()
-      vim.lsp.buf.hover()
-      return true
-    end,
-    priority = 100,
-  },
-  {
-    key = 'gd',
-    mode = 'n',
-    desc = 'LSP go to definition',
-    condition = function()
-      return #vim.lsp.get_active_clients({ bufnr = 0 }) > 0
-    end,
-    handler = function()
-      vim.lsp.buf.definition()
-      return true
-    end,
-  },
-})
-```
+### Design Principles
 
-### Plugin-Specific Keybindings
+**maplayer.nvim** follows solid software engineering principles:
 
-Perfect for plugin configurations that don't interfere with each other:
+- **Open-Closed Principle**: Add new functionality by adding new handlers, not modifying existing ones. When you need new behavior for a key, simply add a new handler with appropriate condition and priority.
+  
+- **Single Responsibility Principle**: Each handler does exactly one thing. This makes handlers easy to understand, test, and maintain.
 
-```lua
--- In your telescope config
-require('maplayer').setup({
-  {
-    key = '<leader>ff',
-    desc = 'Find files',
-    handler = function()
-      require('telescope.builtin').find_files()
-      return true
-    end,
-  },
-  {
-    key = '<leader>fg',
-    desc = 'Live grep',
-    handler = function()
-      require('telescope.builtin').live_grep()
-      return true
-    end,
-  },
-})
-
--- In your nvim-tree config (same key, no conflict!)
-require('maplayer').setup({
-  {
-    key = '<leader>ff',
-    desc = 'Find file in tree',
-    priority = 50, -- Lower priority, won't override telescope
-    condition = function()
-      return vim.bo.filetype == 'NvimTree'
-    end,
-    handler = function()
-      require('nvim-tree.api').tree.find_file()
-      return true
-    end,
-  },
-})
-```
-
-### String Handlers
-
-For simple key remapping, use string handlers:
-
-```lua
-require('maplayer').setup({
-  {
-    key = 'j',
-    mode = 'n',
-    desc = 'Move down (display line)',
-    handler = 'gj', -- String is fed as keys
-  },
-  {
-    key = 'k',
-    mode = 'n',
-    desc = 'Move up (display line)',
-    handler = 'gk',
-  },
-})
-```
-
-### Multiple Modes
-
-```lua
-require('maplayer').setup({
-  {
-    key = '<Esc>',
-    mode = { 'i', 'v' },
-    desc = 'Exit to normal mode',
-    handler = function()
-      vim.cmd('stopinsert')
-      return true
-    end,
-  },
-})
-```
+> **⚠️ Important Reminder**: Remember to call `setup()` or `make()` only **once globally** with all your keybinding specifications. Multiple calls will overwrite previous configurations instead of merging them.
 
 ## Migration from Traditional Keymaps
 
@@ -449,30 +391,66 @@ require('maplayer').setup({
 -- "First" will be tried before "Second"
 ```
 
-### Using `make()` for Lazy Loading
+### Using `make()` for Delayed Binding
+
+The `make()` function generates keymap specifications without immediately registering them. This is primarily useful for **delayed binding**, which allows you to use [which-key.nvim](https://github.com/folke/which-key.nvim)'s interface for keybinding registration.
+
+Here's an example of using `make()` with which-key:
 
 ```lua
--- Generate but don't register yet
+-- Generate keymap specs with maplayer
 local keymaps = require('maplayer').make({
   {
-    key = '<leader>l',
-    desc = 'Lazy load feature',
+    key = '<leader>ff',
+    mode = 'n',
+    desc = 'Find files',
     handler = function()
-      require('heavy.plugin').do_something()
+      require('telescope.builtin').find_files()
+      return true
+    end,
+  },
+  {
+    key = '<leader>fg',
+    mode = 'n',
+    desc = 'Live grep',
+    handler = function()
+      require('telescope.builtin').live_grep()
+      return true
+    end,
+  },
+  {
+    key = '<leader>fb',
+    mode = 'n',
+    desc = 'Find buffers',
+    handler = function()
+      require('telescope.builtin').buffers()
       return true
     end,
   },
 })
 
--- Register later when needed
+-- Register with which-key
+local wk = require('which-key')
 for _, spec in ipairs(keymaps) do
-  vim.keymap.set(spec.mode, spec.lhs, spec.rhs, spec.opts)
+  wk.add({
+    spec.lhs,
+    spec.rhs,
+    mode = spec.mode,
+    desc = spec.opts.desc,
+  })
 end
 ```
 
-### Debugging Keybindings
+This delayed binding approach lets you:
+- Use which-key's registration interface while benefiting from maplayer's conditional handler chains
+- Organize keybindings with which-key's grouping and display features
+- Maintain maplayer's chain of responsibility pattern for the actual key handling logic
 
-Check which handler is being executed:
+### Debugging
+
+> **🚧 RoadMap**: Built-in debugging features are planned for future releases.
+
+For now, you can add logging within your handlers to debug keybinding behavior:
 
 ```lua
 require('maplayer').setup({
@@ -481,6 +459,30 @@ require('maplayer').setup({
     desc = 'Debug handler',
     handler = function()
       print('Handler executed!')
+      print('Current buffer:', vim.api.nvim_get_current_buf())
+      print('Current filetype:', vim.bo.filetype)
+      -- Your actual handler logic here
+      return true
+    end,
+  },
+})
+```
+
+You can also check if conditions are being evaluated correctly:
+
+```lua
+require('maplayer').setup({
+  {
+    key = '<Tab>',
+    mode = 'i',
+    desc = 'Conditional handler',
+    condition = function()
+      local result = vim.fn.pumvisible() == 1
+      print('Condition result:', result)  -- Debug output
+      return result
+    end,
+    handler = function()
+      print('Handler running')  -- Debug output
       return true
     end,
   },
@@ -493,14 +495,14 @@ Internally, maplayer:
 
 1. **Normalizes** all keyspecs (handles mode expansion, case normalization for angle-bracketed keys like `<C-A>` and `<c-a>`, etc.)
 2. **Sorts** handlers by key and priority (with stable sort)
-3. **Merges** multiple handlers for the same key+mode into a chain
-4. **Wraps** handlers with condition checks
+3. **Wraps** each handler with its condition check
+4. **Merges** the condition-wrapped handlers for the same key+mode into a chain
 5. **Generates** a single function that iterates through the chain
 6. **Registers** the final handler with `vim.keymap.set()`
 
 When you press a key:
-- The wrapped function executes
-- Each handler's condition is checked in priority order
+- The merged function executes
+- Condition-wrapped handlers are evaluated in priority order (higher priority first)
 - The first handler whose condition returns true is executed
 - If the handler returns a value, the chain stops
 - If no handler succeeds, the original key is fed back (fallback)
@@ -512,11 +514,6 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
-
-## Related Projects
-
-- [which-key.nvim](https://github.com/folke/which-key.nvim) - Shows keybindings in a popup
-- [lazy.nvim](https://github.com/folke/lazy.nvim) - Modern plugin manager for Neovim
 
 ## Credits
 
