@@ -1,5 +1,7 @@
 # maplayer.nvim
 
+[中文文档](README-zh.md)
+
 Make Vim/Neovim key mappings work like VS Code's - A powerful keybinding manager that solves the conflicts problem with a chain of responsibility pattern.
 
 ## The Problem with Traditional Neovim Keybindings
@@ -108,6 +110,10 @@ require('maplayer').setup({
 ```
 
 > **⚠️ Important**: `setup()` and `make()` should only be called **once globally** in your configuration. Multiple calls will **overwrite** previous keybindings rather than merging them, which can cause unexpected behavior. Choose either one `setup()` call or one `make()` call for all your keybindings.
+
+> **💡 Best Practice**: When using maplayer.nvim, you should **disable plugin-level keybindings** as much as possible and use maplayer.nvim for global binding management instead. This prevents conflicts and gives you centralized control over all keybindings. The exception is when you are certain that a plugin's bindings will only take effect on specific buffers, and you don't want to extend or customize that plugin's keybinding functionality.
+
+> **🔗 Integration with which-key.nvim**: If you use [which-key.nvim](https://github.com/folke/which-key.nvim), see [Using `make()` for Delayed Binding](#using-make-for-delayed-binding) to learn how to integrate maplayer with which-key's interface while maintaining the chain of responsibility pattern.
 
 ## Usage
 
