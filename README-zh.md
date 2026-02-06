@@ -449,17 +449,16 @@ maplayer.nvim 包含内置的日志系统，帮助你调试按键绑定配置。
 
 #### 启用日志
 
-要启用日志，在设置按键绑定之前使用 `config()` 函数：
+要启用日志，在 `setup()` 函数中传入 `log` 配置：
 
 ```lua
--- 启用 INFO 级别的日志
-require('maplayer').config({
-  enabled = true,
-  level = 'INFO',  -- 选项: 'DEBUG', 'INFO', 'WARN', 'ERROR'
-})
-
--- 然后设置你的按键绑定
 require('maplayer').setup({
+  -- 可选：启用日志
+  log = {
+    enabled = true,
+    level = 'DEBUG',  -- 选项: 'DEBUG', 'INFO', 'WARN', 'ERROR'
+  },
+  -- 你的按键绑定
   {
     key = '<leader>ff',
     mode = 'n',
@@ -477,18 +476,11 @@ require('maplayer').setup({
 日志系统支持四个详细程度级别：
 
 - **`DEBUG`**：最详细 - 记录每次条件检查、处理器执行和返回值
-- **`INFO`**：记录按键按下和哪些处理器成功
+- **`INFO`**：记录按键按下和哪些处理器成功（默认不使用）
 - **`WARN`**：仅记录警告
 - **`ERROR`**：仅记录错误
 
-使用 DEBUG 级别进行详细故障排除的示例：
-
-```lua
-require('maplayer').config({
-  enabled = true,
-  level = 'DEBUG',
-})
-```
+**注意**：默认情况下，仅使用 DEBUG 级别的日志进行详细故障排除。
 
 #### 日志输出
 
@@ -497,21 +489,21 @@ require('maplayer').config({
 示例日志消息：
 
 ```
-[maplayer] [INFO] Registering key binding: <Tab> mode: i descriptions: { "接受补全", "跳转到下一个代码片段占位符" }
-[maplayer] [INFO] Key pressed: <Tab> in mode: i
+[maplayer] [DEBUG] Registering key binding: <Tab> mode: i descriptions: { "接受补全", "跳转到下一个代码片段占位符" }
+[maplayer] [DEBUG] Key pressed: <Tab> in mode: i
 [maplayer] [DEBUG] Trying handler 1 for key <Tab>
 [maplayer] [DEBUG] Checking mode for key <Tab> desc: 接受补全 mode_ok: true
 [maplayer] [DEBUG] Checking condition for key <Tab> desc: 接受补全 condition: true
 [maplayer] [DEBUG] Executing handler for key <Tab> desc: 接受补全
 [maplayer] [DEBUG] Handler result for key <Tab> desc: 接受补全 result: true
-[maplayer] [INFO] Handler 1 succeeded for key <Tab> return value: true
+[maplayer] [DEBUG] Handler 1 succeeded for key <Tab> return value: true
 ```
 
-**注意**：DEBUG 和 INFO 级别的消息会记录到 Neovim 日志文件中，也可以通过 `:messages` 查看。WARN 和 ERROR 消息还会在编辑器中显示为通知。
+**注意**：DEBUG 级别的消息会记录到 Neovim 日志文件中，也可以通过 `:messages` 查看。WARN 和 ERROR 消息还会在编辑器中显示为通知。
 
 #### 高级用法
 
-你也可以在处理器中添加自定义日志，与内置日志一起使用：
+你也可以在处理器中添加自定义日志：
 
 ```lua
 require('maplayer').setup({
@@ -527,24 +519,6 @@ require('maplayer').setup({
     end,
   },
 })
-```
-
-对于程序化访问日志记录器，你可以使用：
-
-```lua
-local maplayer = require('maplayer')
-
--- 检查日志是否启用
-if maplayer.logger.is_enabled() then
-  print('日志已启用')
-end
-
--- 获取当前日志级别
-print('当前日志级别：', maplayer.logger.get_level())
-
--- 直接使用日志记录器
-maplayer.logger.info('自定义日志消息')
-maplayer.logger.debug('详细调试信息')
 ```
 
 ## 工作原理

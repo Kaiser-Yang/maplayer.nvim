@@ -155,13 +155,13 @@ end
 --- @return MapLayer.HandlerFunc
 local function handler_wrap(key_spec)
   return function()
-    logger.info('Key pressed:', key_spec.key, 'in mode:', key_spec.mode)
+    logger.debug('Key pressed:', key_spec.key, 'in mode:', key_spec.mode)
     local ret
     for idx, handler in ipairs(key_spec.handler) do
       logger.debug('Trying handler', idx, 'for key', key_spec.key)
       ret = handler.handler()
       if ret then
-        logger.info('Handler', idx, 'succeeded for key', key_spec.key, 'return value:', ret)
+        logger.debug('Handler', idx, 'succeeded for key', key_spec.key, 'return value:', ret)
         if type(ret) == 'string' then
           logger.debug('Feeding keys:', ret, 'remap:', handler.remap, 'replace_keycodes:', handler.replace_keycodes)
           util.feedkeys(ret, (handler.remap and 'm' or 'n') .. 't', handler.replace_keycodes)
@@ -171,7 +171,7 @@ local function handler_wrap(key_spec)
       logger.debug('Handler', idx, 'declined for key', key_spec.key)
     end
     -- Always fallback to the default key when failure
-    logger.info('All handlers declined for key', key_spec.key, 'falling back to default behavior')
+    logger.debug('All handlers declined for key', key_spec.key, 'falling back to default behavior')
     util.feedkeys(key_spec.key, 'nt')
   end
 end
@@ -187,7 +187,7 @@ function M.make(opt)
     for key, key_spec in pairs(spec) do
       assert(key == key_spec.key)
       assert(mode == key_spec.mode)
-      logger.info('Registering key binding:', key, 'mode:', mode, 'descriptions:', key_spec.desc)
+      logger.debug('Registering key binding:', key, 'mode:', mode, 'descriptions:', key_spec.desc)
       table.insert(res, {
         mode = mode,
         lhs = key,
@@ -199,38 +199,43 @@ function M.make(opt)
   return res
 end
 
---- Configure the logger
---- @param opts? table Logger configuration
---- @param opts.enabled? boolean Enable or disable logging (default: false)
---- @param opts.level? number|string Log level: 'DEBUG', 'INFO', 'WARN', 'ERROR', or number (default: 'INFO')
-function M.config(opts)
-  opts = opts or {}
-  -- Convert string level to number if needed
-  if type(opts.level) == 'string' then
-    local level_num = logger.levels[opts.level:upper()]
-    if level_num == nil then
-      vim.notify(
-        string.format('[maplayer] Invalid log level: %s. Using INFO instead.', opts.level),
-        vim.log.levels.WARN
-      )
-      opts.level = logger.levels.INFO
-    else
-      opts.level = level_num
-    end
-  end
-  logger.setup(opts)
-  logger.info('Logger configured with options:', opts)
-end
-
---- @param opt MapLayer.KeySpec|MapLayer.KeySpec[]
+--- @param opt MapLayer.KeySpec|MapLayer.KeySpec[]|MapLayer.SetupOpts
 --- @return nil
 function M.setup(opt)
+  opt = opt or {}
+
+  -- Extract and configure logger if log config is provided
+  if type(opt) == 'table' and not opt.key then
+    -- Check if this is a setup options table with log config
+    if opt.log then
+      local log_opts = opt.log
+      -- Convert string level to number if needed
+      if type(log_opts.level) == 'string' then
+        local level_num = logger.levels[log_opts.level:upper()]
+        if level_num ~= nil then
+          log_opts.level = level_num
+        else
+          log_opts.level = logger.levels.INFO
+        end
+      end
+      logger.setup(log_opts)
+    end
+
+    -- Extract keyspecs (everything except log config)
+    local keyspecs = {}
+    for k, v in pairs(opt) do
+      if k ~= 'log' then table.insert(keyspecs, v) end
+    end
+
+    -- If no keyspecs found, check if opt itself is an array of keyspecs
+    if #keyspecs == 0 and #opt > 0 then keyspecs = opt end
+
+    opt = keyspecs
+  end
+
   for _, spec in ipairs(M.make(opt)) do
     vim.keymap.set(spec.mode, spec.lhs, spec.rhs, spec.opts)
   end
 end
-
--- Expose the logger for advanced users
-M.logger = logger
 
 return M

@@ -449,17 +449,16 @@ maplayer.nvim includes a built-in logging system to help you debug your keybindi
 
 #### Enabling Logging
 
-To enable logging, use the `config()` function before setting up your keybindings:
+To enable logging, pass a `log` configuration in the `setup()` function:
 
 ```lua
--- Enable logging with INFO level
-require('maplayer').config({
-  enabled = true,
-  level = 'INFO',  -- Options: 'DEBUG', 'INFO', 'WARN', 'ERROR'
-})
-
--- Then setup your keybindings
 require('maplayer').setup({
+  -- Optional: Enable logging
+  log = {
+    enabled = true,
+    level = 'DEBUG',  -- Options: 'DEBUG', 'INFO', 'WARN', 'ERROR'
+  },
+  -- Your keybindings
   {
     key = '<leader>ff',
     mode = 'n',
@@ -477,18 +476,11 @@ require('maplayer').setup({
 The logger supports four levels of verbosity:
 
 - **`DEBUG`**: Most verbose - logs every condition check, handler execution, and return value
-- **`INFO`**: Logs key presses and which handlers succeed
+- **`INFO`**: Logs key presses and which handlers succeed (not used by default)
 - **`WARN`**: Logs warnings only
 - **`ERROR`**: Logs errors only
 
-Example with DEBUG level for detailed troubleshooting:
-
-```lua
-require('maplayer').config({
-  enabled = true,
-  level = 'DEBUG',
-})
-```
+**Note**: By default, only DEBUG level logging is used for detailed troubleshooting.
 
 #### Log Output
 
@@ -497,21 +489,21 @@ When logging is enabled, messages are written to Neovim's log file. You can view
 Example log messages:
 
 ```
-[maplayer] [INFO] Registering key binding: <Tab> mode: i descriptions: { "Accept completion", "Jump to next snippet placeholder" }
-[maplayer] [INFO] Key pressed: <Tab> in mode: i
+[maplayer] [DEBUG] Registering key binding: <Tab> mode: i descriptions: { "Accept completion", "Jump to next snippet placeholder" }
+[maplayer] [DEBUG] Key pressed: <Tab> in mode: i
 [maplayer] [DEBUG] Trying handler 1 for key <Tab>
 [maplayer] [DEBUG] Checking mode for key <Tab> desc: Accept completion mode_ok: true
 [maplayer] [DEBUG] Checking condition for key <Tab> desc: Accept completion condition: true
 [maplayer] [DEBUG] Executing handler for key <Tab> desc: Accept completion
 [maplayer] [DEBUG] Handler result for key <Tab> desc: Accept completion result: true
-[maplayer] [INFO] Handler 1 succeeded for key <Tab> return value: true
+[maplayer] [DEBUG] Handler 1 succeeded for key <Tab> return value: true
 ```
 
-**Note**: DEBUG and INFO level messages are logged to the Neovim log file and can also be viewed with `:messages`. WARN and ERROR messages will also appear as notifications in the editor.
+**Note**: DEBUG level messages are logged to the Neovim log file and can be viewed with `:messages`. WARN and ERROR messages will also appear as notifications in the editor.
 
 #### Advanced Usage
 
-You can also add custom logging in your handlers alongside the built-in logging:
+You can also add custom logging in your handlers:
 
 ```lua
 require('maplayer').setup({
@@ -527,24 +519,6 @@ require('maplayer').setup({
     end,
   },
 })
-```
-
-For programmatic access to the logger, you can use:
-
-```lua
-local maplayer = require('maplayer')
-
--- Check if logging is enabled
-if maplayer.logger.is_enabled() then
-  print('Logging is enabled')
-end
-
--- Get current log level
-print('Current log level:', maplayer.logger.get_level())
-
--- Use the logger directly
-maplayer.logger.info('Custom log message')
-maplayer.logger.debug('Detailed debug info')
 ```
 
 ## How It Works
