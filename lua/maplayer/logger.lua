@@ -53,13 +53,21 @@ end
 --- Log a debug message
 --- @param ... any Message parts
 function M.debug(...)
-  if should_log(M.levels.DEBUG) then print(format_message('DEBUG', ...)) end
+  if should_log(M.levels.DEBUG) then
+    local msg = format_message('DEBUG', ...)
+    -- Write to Neovim's log file
+    vim.notify(msg, vim.log.levels.DEBUG)
+  end
 end
 
 --- Log an info message
 --- @param ... any Message parts
 function M.info(...)
-  if should_log(M.levels.INFO) then print(format_message('INFO', ...)) end
+  if should_log(M.levels.INFO) then
+    local msg = format_message('INFO', ...)
+    -- Write to Neovim's log file
+    vim.notify(msg, vim.log.levels.INFO)
+  end
 end
 
 --- Log a warning message

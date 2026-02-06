@@ -492,7 +492,9 @@ require('maplayer').config({
 
 #### Log Output
 
-When logging is enabled, you'll see messages like:
+When logging is enabled, messages are written to Neovim's log file. You can view the log file location with `:lua print(vim.fn.stdpath('log'))` or check messages with `:messages`.
+
+Example log messages:
 
 ```
 [maplayer] [INFO] Registering key binding: <Tab> mode: i descriptions: { "Accept completion", "Jump to next snippet placeholder" }
@@ -504,6 +506,8 @@ When logging is enabled, you'll see messages like:
 [maplayer] [DEBUG] Handler result for key <Tab> desc: Accept completion result: true
 [maplayer] [INFO] Handler 1 succeeded for key <Tab> return value: true
 ```
+
+**Note**: DEBUG and INFO level messages are logged to the Neovim log file and can also be viewed with `:messages`. WARN and ERROR messages will also appear as notifications in the editor.
 
 #### Advanced Usage
 

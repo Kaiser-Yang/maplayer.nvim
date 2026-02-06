@@ -492,7 +492,9 @@ require('maplayer').config({
 
 #### 日志输出
 
-启用日志后，你将看到如下消息：
+启用日志后，消息将写入到 Neovim 的日志文件。你可以使用 `:lua print(vim.fn.stdpath('log'))` 查看日志文件位置，或使用 `:messages` 查看消息。
+
+示例日志消息：
 
 ```
 [maplayer] [INFO] Registering key binding: <Tab> mode: i descriptions: { "接受补全", "跳转到下一个代码片段占位符" }
@@ -504,6 +506,8 @@ require('maplayer').config({
 [maplayer] [DEBUG] Handler result for key <Tab> desc: 接受补全 result: true
 [maplayer] [INFO] Handler 1 succeeded for key <Tab> return value: true
 ```
+
+**注意**：DEBUG 和 INFO 级别的消息会记录到 Neovim 日志文件中，也可以通过 `:messages` 查看。WARN 和 ERROR 消息还会在编辑器中显示为通知。
 
 #### 高级用法
 
