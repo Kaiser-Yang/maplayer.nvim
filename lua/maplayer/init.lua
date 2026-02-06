@@ -158,14 +158,31 @@ local function handler_wrap(key_spec)
 end
 
 --- @param opt MapLayer.KeySpec|MapLayer.KeySpec[]
---- @return nil
-function M.setup(opt)
+--- @return MapLayer.MapSetArg[]
+function M.make(opt)
+  --- @type MapLayer.MapSetArg[]
+  local res = {}
   opt = normalise_key(util.ensure_list(opt))
   for mode, spec in pairs(opt) do
     for key, key_spec in pairs(spec) do
       assert(key == key_spec.key)
-      vim.keymap.set(mode, key, handler_wrap(key_spec), generate_opt(key_spec))
+      assert(mode == key_spec.mode)
+      table.insert(res, {
+        mode = mode,
+        lhs = key,
+        rhs = handler_wrap(key_spec),
+        opts = generate_opt(key_spec),
+      })
     end
+  end
+  return res
+end
+
+--- @param opt MapLayer.KeySpec|MapLayer.KeySpec[]
+--- @return nil
+function M.setup(opt)
+  for _, spec in ipairs(M.make(opt)) do
+    vim.keymap.set(spec.mode, spec.lhs, spec.rhs, spec.opts)
   end
 end
 

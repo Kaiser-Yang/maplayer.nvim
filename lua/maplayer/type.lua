@@ -23,3 +23,9 @@
 --- @field mode string
 --- @field desc string[]
 --- @field handler MapLayer.MergedHandlerFunc[]
+
+--- @class MapLayer.MapSetArg
+--- @field mode string[]
+--- @field lhs string
+--- @field rhs function
+--- @field opts vim.keymap.set.Opts
