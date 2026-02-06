@@ -303,16 +303,7 @@ require('maplayer').setup({
     end,
   },
   
-  -- Priority 0: Default Tab behavior (insert tab or spaces)
-  {
-    key = '<Tab>',
-    mode = 'i',
-    desc = 'Insert tab',
-    priority = 0,
-    handler = function()
-      return '<Tab>'
-    end,
-  },
+  -- Default Tab behavior will fallback automatically when no condition matches
 })
 ```
 
