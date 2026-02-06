@@ -13,6 +13,10 @@
 --- @field replace_keycodes? boolean Default to true
 --- @field handler MapLayer.HandlerFunc|string
 
+--- @class MapLayer.LogConfig
+--- @field enabled? boolean Enable or disable logging (default: false)
+--- @field level? number|string Log level: 'DEBUG', 'INFO', 'WARN', 'ERROR', or number (default: 'INFO')
+
 --- @class MapLayer.MergedHandlerFunc
 --- @field handler MapLayer.HandlerFunc
 --- @field remap boolean

@@ -1,5 +1,6 @@
 local M = {}
 local util = require('maplayer.util')
+local logger = require('maplayer.logger')
 
 --- Make letters inside angle brackets lowercase, except for
 --- '<M-A>' or '<m-A>', which become '<m-A>',
@@ -45,11 +46,22 @@ local function check_mode(mode)
 end
 
 --- @return MapLayer.HandlerFunc
-local function condition_wrap(mode, condition, handler)
+local function condition_wrap(mode, condition, handler, key, desc)
   return function()
     -- NOTE:
     -- We can not remove the check_mode here, because we can not bind only for Lang-Arg
-    if check_mode(mode) and condition() then return handler() end
+    local mode_ok = check_mode(mode)
+    logger.debug('Checking mode for key', key, 'desc:', desc, 'mode_ok:', mode_ok)
+    if mode_ok then
+      local cond_ok = condition()
+      logger.debug('Checking condition for key', key, 'desc:', desc, 'condition:', cond_ok)
+      if cond_ok then
+        logger.debug('Executing handler for key', key, 'desc:', desc)
+        local result = handler()
+        logger.debug('Handler result for key', key, 'desc:', desc, 'result:', result)
+        return result
+      end
+    end
   end
 end
 
@@ -86,7 +98,7 @@ local function normalise_key(t)
       local value = tostring(key_spec.handler)
       key_spec.handler = function() return value end
     end
-    key_spec.handler = condition_wrap(key_spec.mode, key_spec.condition, key_spec.handler)
+    key_spec.handler = condition_wrap(key_spec.mode, key_spec.condition, key_spec.handler, key_spec.key, key_spec.desc)
   end
   table.sort(t, function(a, b)
     if a.key ~= b.key then return a.key < b.key end
@@ -143,17 +155,23 @@ end
 --- @return MapLayer.HandlerFunc
 local function handler_wrap(key_spec)
   return function()
+    logger.info('Key pressed:', key_spec.key, 'in mode:', key_spec.mode)
     local ret
-    for _, handler in ipairs(key_spec.handler) do
+    for idx, handler in ipairs(key_spec.handler) do
+      logger.debug('Trying handler', idx, 'for key', key_spec.key)
       ret = handler.handler()
       if ret then
+        logger.info('Handler', idx, 'succeeded for key', key_spec.key, 'return value:', ret)
         if type(ret) == 'string' then
+          logger.debug('Feeding keys:', ret, 'remap:', handler.remap, 'replace_keycodes:', handler.replace_keycodes)
           util.feedkeys(ret, (handler.remap and 'm' or 'n') .. 't', handler.replace_keycodes)
         end
         return
       end
+      logger.debug('Handler', idx, 'declined for key', key_spec.key)
     end
     -- Always fallback to the default key when failure
+    logger.info('All handlers declined for key', key_spec.key, 'falling back to default behavior')
     util.feedkeys(key_spec.key, 'nt')
   end
 end
@@ -163,11 +181,13 @@ end
 function M.make(opt)
   --- @type MapLayer.MapSetArg[]
   local res = {}
-  opt = normalise_key(util.ensure_list(opt))
-  for mode, spec in pairs(opt) do
+  local normalized_opt = normalise_key(util.ensure_list(opt))
+  logger.debug('Normalized keybindings:', normalized_opt)
+  for mode, spec in pairs(normalized_opt) do
     for key, key_spec in pairs(spec) do
       assert(key == key_spec.key)
       assert(mode == key_spec.mode)
+      logger.info('Registering key binding:', key, 'mode:', mode, 'descriptions:', key_spec.desc)
       table.insert(res, {
         mode = mode,
         lhs = key,
@@ -179,6 +199,18 @@ function M.make(opt)
   return res
 end
 
+--- Configure the logger
+--- @param opts? table Logger configuration
+--- @param opts.enabled? boolean Enable or disable logging (default: false)
+--- @param opts.level? number|string Log level: 'DEBUG', 'INFO', 'WARN', 'ERROR', or number (default: 'INFO')
+function M.config(opts)
+  opts = opts or {}
+  -- Convert string level to number if needed
+  if type(opts.level) == 'string' then opts.level = logger.levels[opts.level:upper()] end
+  logger.setup(opts)
+  logger.info('Logger configured with options:', opts)
+end
+
 --- @param opt MapLayer.KeySpec|MapLayer.KeySpec[]
 --- @return nil
 function M.setup(opt)
@@ -186,5 +218,8 @@ function M.setup(opt)
     vim.keymap.set(spec.mode, spec.lhs, spec.rhs, spec.opts)
   end
 end
+
+-- Expose the logger for advanced users
+M.logger = logger
 
 return M

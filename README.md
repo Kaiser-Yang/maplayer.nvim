@@ -445,9 +445,69 @@ This delayed binding approach lets you:
 
 ### Debugging
 
-> **🚧 RoadMap**: Built-in debugging features are planned for future releases.
+maplayer.nvim includes a built-in logging system to help you debug your keybinding configurations.
 
-For now, you can add logging within your handlers to debug keybinding behavior:
+#### Enabling Logging
+
+To enable logging, use the `config()` function before setting up your keybindings:
+
+```lua
+-- Enable logging with INFO level
+require('maplayer').config({
+  enabled = true,
+  level = 'INFO',  -- Options: 'DEBUG', 'INFO', 'WARN', 'ERROR'
+})
+
+-- Then setup your keybindings
+require('maplayer').setup({
+  {
+    key = '<leader>ff',
+    mode = 'n',
+    desc = 'Find files',
+    handler = function()
+      require('telescope.builtin').find_files()
+      return true
+    end,
+  },
+})
+```
+
+#### Log Levels
+
+The logger supports four levels of verbosity:
+
+- **`DEBUG`**: Most verbose - logs every condition check, handler execution, and return value
+- **`INFO`**: Logs key presses and which handlers succeed
+- **`WARN`**: Logs warnings only
+- **`ERROR`**: Logs errors only
+
+Example with DEBUG level for detailed troubleshooting:
+
+```lua
+require('maplayer').config({
+  enabled = true,
+  level = 'DEBUG',
+})
+```
+
+#### Log Output
+
+When logging is enabled, you'll see messages like:
+
+```
+[maplayer] [INFO] Registering key binding: <Tab> mode: i descriptions: { "Accept completion", "Jump to next snippet placeholder" }
+[maplayer] [INFO] Key pressed: <Tab> in mode: i
+[maplayer] [DEBUG] Trying handler 1 for key <Tab>
+[maplayer] [DEBUG] Checking mode for key <Tab> desc: Accept completion mode_ok: true
+[maplayer] [DEBUG] Checking condition for key <Tab> desc: Accept completion condition: true
+[maplayer] [DEBUG] Executing handler for key <Tab> desc: Accept completion
+[maplayer] [DEBUG] Handler result for key <Tab> desc: Accept completion result: true
+[maplayer] [INFO] Handler 1 succeeded for key <Tab> return value: true
+```
+
+#### Advanced Usage
+
+You can also add custom logging in your handlers alongside the built-in logging:
 
 ```lua
 require('maplayer').setup({
@@ -465,25 +525,22 @@ require('maplayer').setup({
 })
 ```
 
-You can also check if conditions are being evaluated correctly:
+For programmatic access to the logger, you can use:
 
 ```lua
-require('maplayer').setup({
-  {
-    key = '<Tab>',
-    mode = 'i',
-    desc = 'Conditional handler',
-    condition = function()
-      local result = vim.fn.pumvisible() == 1
-      print('Condition result:', result)  -- Debug output
-      return result
-    end,
-    handler = function()
-      print('Handler running')  -- Debug output
-      return true
-    end,
-  },
-})
+local maplayer = require('maplayer')
+
+-- Check if logging is enabled
+if maplayer.logger.is_enabled() then
+  print('Logging is enabled')
+end
+
+-- Get current log level
+print('Current log level:', maplayer.logger.get_level())
+
+-- Use the logger directly
+maplayer.logger.info('Custom log message')
+maplayer.logger.debug('Detailed debug info')
 ```
 
 ## How It Works
