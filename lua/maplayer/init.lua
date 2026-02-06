@@ -57,7 +57,7 @@ end
 --- @param t MapLayer.KeySpec[]
 --- @return table<string, table<string, MapLayer.MergedKeySpec>>
 local function normalise_key(t)
-  for _, key_spec in ipairs(t) do
+  for idx, key_spec in ipairs(t) do
     key_spec.key = lower_bracket(key_spec.key)
     --- @type string[]
     local mode_expanded = {}
@@ -76,7 +76,8 @@ local function normalise_key(t)
     end
     key_spec.mode = mode_expanded
     key_spec.desc = key_spec.desc or ''
-    key_spec.priority = key_spec.priority or 0
+    -- NOTE: Add idx here to make "sort" stable
+    key_spec.priority = (key_spec.priority or 0) + idx
     key_spec.noremap = key_spec.noremap == nil and true or key_spec.noremap
     key_spec.remap = key_spec.remap or false
     key_spec.replace_keycodes = key_spec.replace_keycodes == nil and true or key_spec.replace_keycodes
