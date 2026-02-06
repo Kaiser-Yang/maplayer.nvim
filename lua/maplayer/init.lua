@@ -205,30 +205,24 @@ function M.setup(opt)
   opt = opt or {}
 
   -- Extract and configure logger if log config is provided
-  if type(opt) == 'table' and not opt.key then
-    -- Check if this is a setup options table with log config
-    if opt.log then
-      local log_opts = opt.log
-      -- Convert string level to number if needed
-      if type(log_opts.level) == 'string' then
-        local level_num = logger.levels[log_opts.level:upper()]
-        if level_num ~= nil then
-          log_opts.level = level_num
-        else
-          log_opts.level = logger.levels.INFO
-        end
+  if type(opt) == 'table' and opt.log then
+    local log_opts = opt.log
+    -- Convert string level to number if needed
+    if type(log_opts.level) == 'string' then
+      local level_num = logger.levels[log_opts.level:upper()]
+      if level_num ~= nil then
+        log_opts.level = level_num
+      else
+        log_opts.level = logger.levels.INFO
       end
-      logger.setup(log_opts)
     end
+    logger.setup(log_opts)
 
-    -- Extract keyspecs (everything except log config)
+    -- Extract keyspecs (array elements only, excluding log config)
     local keyspecs = {}
     for k, v in pairs(opt) do
-      if k ~= 'log' then table.insert(keyspecs, v) end
+      if type(k) == 'number' then table.insert(keyspecs, v) end
     end
-
-    -- If no keyspecs found, check if opt itself is an array of keyspecs
-    if #keyspecs == 0 and #opt > 0 then keyspecs = opt end
 
     opt = keyspecs
   end
