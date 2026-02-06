@@ -120,14 +120,11 @@ local function normalise_key(t)
         assert(key == tmp[key].key)
         assert(m == tmp[key].mode)
         if not vim.tbl_contains(tmp[key].desc, key_spec.desc) then table.insert(tmp[key].desc, key_spec.desc) end
-        table.insert(
-          tmp[key].handler,
-          {
-            handler = key_spec.handler,
-            remap = key_spec.remap or key_spec.noremap == false,
-            replace_keycodes = key_spec.replace_keycodes,
-          }
-        )
+        table.insert(tmp[key].handler, {
+          handler = key_spec.handler,
+          remap = key_spec.remap or key_spec.noremap == false,
+          replace_keycodes = key_spec.replace_keycodes,
+        })
       end
     end
   end
