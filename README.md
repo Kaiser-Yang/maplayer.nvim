@@ -175,7 +175,7 @@ The `mode` field accepts:
 - Array of modes: `{ 'n', 'v' }`
 - Mode aliases:
   - `''` - Normal, Visual, Select, and Operator-pending modes
-  - `'!'` - Insert and Command-line modes  
+  - `'!'` - Insert and Command-line modes
   - `'v'` - Visual and Select modes
 
 ## Examples
@@ -443,8 +443,8 @@ Priority values are used for sorting, and the order of definition provides stabl
 -- If two handlers have the same priority, 
 -- the one defined first will be evaluated first
 require('maplayer').setup({
-  { key = '<leader>f', priority = 10, desc = 'First', handler = ... },
-  { key = '<leader>f', priority = 10, desc = 'Second', handler = ... },
+  { key = '<leader>f', priority = 10, desc = 'First', handler = function() return true end },
+  { key = '<leader>f', priority = 10, desc = 'Second', handler = function() return true end },
 })
 -- "First" will be tried before "Second"
 ```
@@ -491,7 +491,7 @@ require('maplayer').setup({
 
 Internally, maplayer:
 
-1. **Normalizes** all keyspecs (handles mode expansion, case-insensitive keys, etc.)
+1. **Normalizes** all keyspecs (handles mode expansion, case normalization for angle-bracketed keys like `<C-A>` and `<c-a>`, etc.)
 2. **Sorts** handlers by key and priority (with stable sort)
 3. **Merges** multiple handlers for the same key+mode into a chain
 4. **Wraps** handlers with condition checks
