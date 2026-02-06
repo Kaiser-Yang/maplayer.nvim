@@ -17,9 +17,8 @@
 --- @field enabled? boolean Enable or disable logging (default: false)
 --- @field level? number|string Log level: 'DEBUG', 'INFO', 'WARN', 'ERROR', or number (default: 'INFO')
 
---- @class MapLayer.SetupOpts
+--- @class MapLayer.SetupOpts : MapLayer.KeySpec[]
 --- @field log? MapLayer.LogConfig Logger configuration
---- @field [integer] MapLayer.KeySpec Array of keyspecs
 
 --- @class MapLayer.MergedHandlerFunc
 --- @field handler MapLayer.HandlerFunc

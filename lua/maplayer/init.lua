@@ -176,12 +176,19 @@ local function handler_wrap(key_spec)
   end
 end
 
---- @param opt MapLayer.KeySpec|MapLayer.KeySpec[]
+--- @param opt MapLayer.SetupOpts
 --- @return MapLayer.MapSetArg[]
 function M.make(opt)
   --- @type MapLayer.MapSetArg[]
   local res = {}
-  local normalized_opt = normalise_key(util.ensure_list(opt))
+
+  -- Extract keyspecs (array elements only, excluding log config)
+  local keyspecs = {}
+  for k, v in pairs(opt) do
+    if type(k) == 'number' then table.insert(keyspecs, v) end
+  end
+
+  local normalized_opt = normalise_key(keyspecs)
   logger.debug('Normalized keybindings:', normalized_opt)
   for mode, spec in pairs(normalized_opt) do
     for key, key_spec in pairs(spec) do
@@ -199,13 +206,13 @@ function M.make(opt)
   return res
 end
 
---- @param opt MapLayer.KeySpec|MapLayer.KeySpec[]|MapLayer.SetupOpts
+--- @param opt MapLayer.SetupOpts
 --- @return nil
 function M.setup(opt)
   opt = opt or {}
 
   -- Extract and configure logger if log config is provided
-  if type(opt) == 'table' and opt.log then
+  if opt.log then
     local log_opts = opt.log
     -- Convert string level to number if needed
     if type(log_opts.level) == 'string' then
@@ -217,14 +224,6 @@ function M.setup(opt)
       end
     end
     logger.setup(log_opts)
-
-    -- Extract keyspecs (array elements only, excluding log config)
-    local keyspecs = {}
-    for k, v in pairs(opt) do
-      if type(k) == 'number' then table.insert(keyspecs, v) end
-    end
-
-    opt = keyspecs
   end
 
   for _, spec in ipairs(M.make(opt)) do
