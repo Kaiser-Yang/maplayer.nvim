@@ -19,7 +19,7 @@ local config = {
 --- Initialize the logger with configuration
 --- @param opts? table Configuration options
 --- @param opts.enabled? boolean Enable or disable logging (default: false)
---- @param opts.level? number Log level (default: INFO)
+--- @param opts.level? number|string Log level (default: INFO)
 function M.setup(opts)
   opts = opts or {}
   config.enabled = opts.enabled ~= nil and opts.enabled or false

@@ -206,7 +206,18 @@ end
 function M.config(opts)
   opts = opts or {}
   -- Convert string level to number if needed
-  if type(opts.level) == 'string' then opts.level = logger.levels[opts.level:upper()] end
+  if type(opts.level) == 'string' then
+    local level_num = logger.levels[opts.level:upper()]
+    if level_num == nil then
+      vim.notify(
+        string.format('[maplayer] Invalid log level: %s. Using INFO instead.', opts.level),
+        vim.log.levels.WARN
+      )
+      opts.level = logger.levels.INFO
+    else
+      opts.level = level_num
+    end
+  end
   logger.setup(opts)
   logger.info('Logger configured with options:', opts)
 end
