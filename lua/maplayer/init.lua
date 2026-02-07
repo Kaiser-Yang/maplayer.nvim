@@ -100,20 +100,15 @@ local function normalise_key(t)
     if original_condition == nil then
       key_spec.condition = function() return true end
     elseif type(original_condition) == 'boolean' then
-      local condition_value = original_condition
-      key_spec.condition = function() return condition_value end
+      key_spec.condition = function() return original_condition end
     end
 
     -- Store original handler before wrapping
-    local original_handler = key_spec.handler
     if type(key_spec.handler) == 'string' then
       local value = tostring(key_spec.handler)
       key_spec.handler = function() return value end
     end
     key_spec.handler = condition_wrap(key_spec.mode, key_spec.condition, key_spec.handler, key_spec.key, original_desc)
-    -- Store original desc for later use
-    key_spec._original_desc = original_desc
-    key_spec._original_handler = original_handler
   end
   table.sort(t, function(a, b)
     if a.key ~= b.key then return a.key < b.key end
@@ -141,7 +136,7 @@ local function normalise_key(t)
               handler = key_spec.handler,
               remap = key_spec.remap or key_spec.noremap == false,
               replace_keycodes = key_spec.replace_keycodes,
-              desc = key_spec._original_desc,
+              desc = key_spec.desc,
             },
           },
         }
@@ -153,7 +148,7 @@ local function normalise_key(t)
           handler = key_spec.handler,
           remap = key_spec.remap or key_spec.noremap == false,
           replace_keycodes = key_spec.replace_keycodes,
-          desc = key_spec._original_desc,
+          desc = key_spec.desc,
         })
       end
     end

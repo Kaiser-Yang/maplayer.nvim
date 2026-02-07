@@ -6,7 +6,7 @@
 --- @field key string The key to be mapped
 --- @field mode? string|string[] Default to 'n'
 --- @field desc? string Default to ''
---- @field condition? fun(): boolean|boolean Default to a function always returning true, or a boolean value
+--- @field condition? fun(): boolean|boolean Default to a function always returning true
 --- @field priority? integer Default to 0
 --- @field noremap? boolean Default to true
 --- @field remap? boolean Default to false
