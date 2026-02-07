@@ -537,20 +537,17 @@ require('maplayer').setup({
 
 这种方法适用于任何提供 `<Plug>` 映射或命令序列的插件。
 
-#### 示例：带有 count 支持的 nvim-autopairs 懒加载
+#### 示例：为 Plug 映射使用 count
 
-[nvim-autopairs](https://github.com/windwp/nvim-autopairs) 提供支持 Vim count 功能的 `<Plug>` 映射。`count` 参数对于支持行相关操作的映射特别有用，比如 `<Plug>(dial-increment)`、`<Plug>(dial-decrement)` 或类似的接受 count 前缀的映射。
+许多 Vim 插件提供支持 Vim count 功能的 `<Plug>` 映射。`count` 参数对于这些映射特别有用，例如来自 [dial.nvim](https://github.com/monaqa/dial.nvim) 的增减操作映射，或其他具有支持 count 操作的插件。
 
 以下是懒加载提供支持 count 的 `<Plug>` 映射的插件示例：
 
 ```lua
 -- 在你的 lazy.nvim 配置中
 {
-  'some-plugin/plugin-name',
+  'monaqa/dial.nvim',
   lazy = true,
-  opts = {
-    -- 禁用默认按键映射
-  },
 }
 
 -- 在你的 maplayer 设置中
@@ -561,8 +558,8 @@ require('maplayer').setup({
     desc = '增加数字',
     count = true,  -- 启用 count 支持
     handler = function()
-      require('some-plugin')  -- 懒加载插件
-      return '<Plug>(some-plugin-increment)'
+      require('dial.map')  -- 懒加载插件
+      return '<Plug>(dial-increment)'
     end,
   },
   {
@@ -571,8 +568,8 @@ require('maplayer').setup({
     desc = '减少数字',
     count = true,  -- 启用 count 支持
     handler = function()
-      require('some-plugin')
-      return '<Plug>(some-plugin-decrement)'
+      require('dial.map')
+      return '<Plug>(dial-decrement)'
     end,
   },
 })
@@ -582,15 +579,22 @@ require('maplayer').setup({
 
 当你设置 `count = true` 时，输入 `3<C-a>` 将会：
 1. 从 `vim.v.count` 捕获 count 值 `3`
-2. 执行处理器并返回 `'<Plug>(some-plugin-increment)'`
-3. 将 count 拼接在前面创建 `'3<Plug>(some-plugin-increment)'`
+2. 执行处理器并返回 `'<Plug>(dial-increment)'`
+3. 将 count 拼接在前面创建 `'3<Plug>(dial-increment)'`
 4. 将这个组合字符串输入给 Vim
 
 这允许 `<Plug>` 映射接收 count，使得"增加 3 次"或"减少 5 次"等操作能够正常工作。如果没有 `count = true`，count 会丢失，`<Plug>` 映射只会执行一次。
 
-**autopairs 的实际示例：**
+**何时使用 `count = true`：**
 
-对于像 nvim-autopairs 这样具有与行相关操作（例如，在不同行的括号之间移动）的插件，你需要设置 `count = true` 来保留 count 行为：
+在以下情况下使用此参数：
+- `<Plug>` 映射或命令接受 count 前缀
+- 你想保留 Vim 的 count 行为（例如，`5j` 向下移动 5 行）
+- 底层操作应该被 count 值重复或缩放
+
+**autopairs 示例：**
+
+如果你使用像 nvim-autopairs 这样的插件，并且有支持 count 的自定义 `<Plug>` 映射，你也需要设置 `count = true`：
 
 ```lua
 require('maplayer').setup({
@@ -598,7 +602,7 @@ require('maplayer').setup({
     key = '<M-e>',
     mode = 'i',
     desc = '快速包裹',
-    count = true,  -- 保留 count 用于行相关操作
+    -- 仅在你的特定 <Plug> 映射支持 count 时才设置 count = true
     handler = function()
       require('nvim-autopairs.fastwrap').setup({})
       return '<Plug>(fastwrap)'
