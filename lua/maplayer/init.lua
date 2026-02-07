@@ -81,7 +81,7 @@ local function normalise_key(t)
     key_spec.noremap = key_spec.noremap == nil and true or key_spec.noremap
     key_spec.remap = key_spec.remap or false
     key_spec.replace_keycodes = key_spec.replace_keycodes == nil and true or key_spec.replace_keycodes
-    key_spec.condition = key_spec.condition and key_spec.condition or function() return true end
+    key_spec.condition = key_spec.condition or function() return true end
     if type(key_spec.handler) == 'string' then
       local value = tostring(key_spec.handler)
       key_spec.handler = function() return value end
