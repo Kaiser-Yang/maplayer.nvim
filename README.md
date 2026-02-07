@@ -443,11 +443,203 @@ This delayed binding approach lets you:
 - Organize keybindings with which-key's grouping and display features
 - Maintain maplayer's chain of responsibility pattern for the actual key handling logic
 
+### Lazy Loading Plugins with maplayer
+
+**maplayer.nvim** enables lazy loading for most plugins that don't rely on `autocmd` events. By deferring plugin loading until the first key press, you can significantly improve Neovim's startup time.
+
+#### How It Works
+
+When using [lazy.nvim](https://github.com/folke/lazy.nvim), you can:
+1. Set `lazy = true` for the plugin
+2. Disable the plugin's default keybindings
+3. Use maplayer handlers that `require()` the plugin only when needed
+4. Return the plugin's key sequence (like `<Plug>` mappings)
+
+On first keypress, lazy.nvim loads the plugin automatically when `require()` is called.
+
+#### Example: Lazy Loading nvim-surround
+
+[nvim-surround](https://github.com/kylechui/nvim-surround) provides `<Plug>` mappings for text surrounding operations. Here's how to lazy load it with maplayer:
+
+```lua
+-- In your lazy.nvim config
+{
+  'kylechui/nvim-surround',
+  lazy = true,
+  opts = {
+    keymaps = {
+      -- Disable all default keymaps
+      insert = false,
+      insert_line = false,
+      normal = false,
+      normal_cur = false,
+      normal_line = false,
+      normal_cur_line = false,
+      visual = false,
+      visual_line = false,
+      delete = false,
+      change = false,
+      change_line = false,
+    },
+  },
+}
+
+-- In your maplayer setup
+require('maplayer').setup({
+  {
+    key = 'ys',
+    mode = 'n',
+    desc = 'Add surround',
+    handler = function()
+      require('nvim-surround')  -- Lazy loads the plugin
+      return '<Plug>(nvim-surround-normal)'
+    end,
+  },
+  {
+    key = 'yss',
+    mode = 'n',
+    desc = 'Add surround to line',
+    handler = function()
+      require('nvim-surround')
+      return '<Plug>(nvim-surround-normal-cur)'
+    end,
+  },
+  {
+    key = 'ds',
+    mode = 'n',
+    desc = 'Delete surround',
+    handler = function()
+      require('nvim-surround')
+      return '<Plug>(nvim-surround-delete)'
+    end,
+  },
+  {
+    key = 'cs',
+    mode = 'n',
+    desc = 'Change surround',
+    handler = function()
+      require('nvim-surround')
+      return '<Plug>(nvim-surround-change)'
+    end,
+  },
+  {
+    key = 'S',
+    mode = 'x',
+    desc = 'Add surround in visual mode',
+    handler = function()
+      require('nvim-surround')
+      return '<Plug>(nvim-surround-visual)'
+    end,
+  },
+})
+```
+
+This approach works for any plugin that provides `<Plug>` mappings or command sequences.
+
+### What maplayer Doesn't Do
+
+**maplayer is designed for global keybindings management.** It doesn't support buffer-local mappings directly (i.e., `buffer = true` option), as this would complicate the global keybinding coordination.
+
+#### Buffer-Local Mappings with make()
+
+If you need buffer-local keybindings, you can use `make()` to generate keymaps and register them with `autocmd`:
+
+```lua
+local maplayer = require('maplayer')
+
+-- Generate keymaps for a specific filetype
+local markdown_maps = maplayer.make({
+  {
+    key = '<CR>',
+    mode = 'n',
+    desc = 'Follow link',
+    handler = function()
+      -- Markdown-specific logic
+      vim.cmd('normal! gx')
+      return true
+    end,
+  },
+})
+
+-- Remove buffer field from opts and register with autocmd
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'markdown',
+  callback = function(args)
+    for _, spec in ipairs(markdown_maps) do
+      -- Clear the buffer field if it exists in opts
+      local opts = vim.tbl_extend('force', spec.opts, { buffer = args.buf })
+      vim.keymap.set(spec.mode, spec.lhs, spec.rhs, opts)
+    end
+  end,
+})
+```
+
+This pattern allows you to:
+- Use maplayer's conditional handler chains for buffer-local keybindings
+- Maintain the chain of responsibility pattern
+- Set keybindings only for specific buffers via autocmd
+
 ### Debugging
 
-> **🚧 RoadMap**: Built-in debugging features are planned for future releases.
+maplayer.nvim includes a built-in logging system to help you debug your keybinding configurations.
 
-For now, you can add logging within your handlers to debug keybinding behavior:
+#### Enabling Logging
+
+To enable logging, pass a `log` configuration in the `setup()` function:
+
+```lua
+require('maplayer').setup({
+  -- Optional: Enable logging
+  log = {
+    enabled = true,
+    level = 'DEBUG',  -- Options: 'DEBUG', 'INFO', 'WARN', 'ERROR'
+  },
+  -- Your keybindings
+  {
+    key = '<leader>ff',
+    mode = 'n',
+    desc = 'Find files',
+    handler = function()
+      require('telescope.builtin').find_files()
+      return true
+    end,
+  },
+})
+```
+
+#### Log Levels
+
+The logger supports four levels of verbosity:
+
+- **`DEBUG`**: Most verbose - logs every condition check, handler execution, and return value
+- **`INFO`**: Logs key presses and which handlers succeed (not used by default)
+- **`WARN`**: Logs warnings only
+- **`ERROR`**: Logs errors only
+
+**Note**: By default, only DEBUG level logging is used for detailed troubleshooting.
+
+#### Log Output
+
+When logging is enabled, messages are written to Neovim's log file. You can view the log file location with `:lua print(vim.fn.stdpath('log'))` or check messages with `:messages`.
+
+Example log messages:
+
+```
+[maplayer] [DEBUG] Registering key binding: <Tab> mode: i descriptions: { "Accept completion", "Jump to next snippet placeholder" }
+[maplayer] [DEBUG] Key pressed: <Tab> in mode: i
+[maplayer] [DEBUG] Trying handler 1 for key <Tab>
+[maplayer] [DEBUG] Checking mode for key <Tab> desc: Accept completion mode_ok: true
+[maplayer] [DEBUG] Checking condition for key <Tab> desc: Accept completion condition: true
+[maplayer] [DEBUG] Executing handler for key <Tab> desc: Accept completion
+[maplayer] [DEBUG] Handler result for key <Tab> desc: Accept completion result: true
+[maplayer] [DEBUG] Handler 1 succeeded for key <Tab> return value: true
+```
+
+**Note**: DEBUG level messages are logged to the Neovim log file and can be viewed with `:messages`. WARN and ERROR messages will also appear as notifications in the editor.
+
+#### Advanced Usage
+
+You can also add custom logging in your handlers:
 
 ```lua
 require('maplayer').setup({
@@ -459,27 +651,6 @@ require('maplayer').setup({
       print('Current buffer:', vim.api.nvim_get_current_buf())
       print('Current filetype:', vim.bo.filetype)
       -- Your actual handler logic here
-      return true
-    end,
-  },
-})
-```
-
-You can also check if conditions are being evaluated correctly:
-
-```lua
-require('maplayer').setup({
-  {
-    key = '<Tab>',
-    mode = 'i',
-    desc = 'Conditional handler',
-    condition = function()
-      local result = vim.fn.pumvisible() == 1
-      print('Condition result:', result)  -- Debug output
-      return result
-    end,
-    handler = function()
-      print('Handler running')  -- Debug output
       return true
     end,
   },

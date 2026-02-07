@@ -443,11 +443,203 @@ end
 - 使用 which-key 的分组和显示功能组织按键绑定
 - 为实际的按键处理逻辑保持 maplayer 的责任链模式
 
+### 使用 maplayer 实现插件懒加载
+
+**maplayer.nvim** 可以为大多数不依赖 `autocmd` 事件的插件实现懒加载。通过延迟插件加载直到第一次按键，你可以显著提升 Neovim 的启动速度。
+
+#### 工作原理
+
+使用 [lazy.nvim](https://github.com/folke/lazy.nvim) 时，你可以：
+1. 为插件设置 `lazy = true`
+2. 禁用插件的默认按键绑定
+3. 使用 maplayer 处理器，仅在需要时 `require()` 插件
+4. 返回插件的按键序列（如 `<Plug>` 映射）
+
+在首次按键时，lazy.nvim 会在调用 `require()` 时自动加载插件。
+
+#### 示例：懒加载 nvim-surround
+
+[nvim-surround](https://github.com/kylechui/nvim-surround) 提供用于文本环绕操作的 `<Plug>` 映射。以下是如何使用 maplayer 懒加载它：
+
+```lua
+-- 在你的 lazy.nvim 配置中
+{
+  'kylechui/nvim-surround',
+  lazy = true,
+  opts = {
+    keymaps = {
+      -- 禁用所有默认按键映射
+      insert = false,
+      insert_line = false,
+      normal = false,
+      normal_cur = false,
+      normal_line = false,
+      normal_cur_line = false,
+      visual = false,
+      visual_line = false,
+      delete = false,
+      change = false,
+      change_line = false,
+    },
+  },
+}
+
+-- 在你的 maplayer 设置中
+require('maplayer').setup({
+  {
+    key = 'ys',
+    mode = 'n',
+    desc = '添加环绕',
+    handler = function()
+      require('nvim-surround')  -- 懒加载插件
+      return '<Plug>(nvim-surround-normal)'
+    end,
+  },
+  {
+    key = 'yss',
+    mode = 'n',
+    desc = '为整行添加环绕',
+    handler = function()
+      require('nvim-surround')
+      return '<Plug>(nvim-surround-normal-cur)'
+    end,
+  },
+  {
+    key = 'ds',
+    mode = 'n',
+    desc = '删除环绕',
+    handler = function()
+      require('nvim-surround')
+      return '<Plug>(nvim-surround-delete)'
+    end,
+  },
+  {
+    key = 'cs',
+    mode = 'n',
+    desc = '更改环绕',
+    handler = function()
+      require('nvim-surround')
+      return '<Plug>(nvim-surround-change)'
+    end,
+  },
+  {
+    key = 'S',
+    mode = 'x',
+    desc = '在可视模式下添加环绕',
+    handler = function()
+      require('nvim-surround')
+      return '<Plug>(nvim-surround-visual)'
+    end,
+  },
+})
+```
+
+这种方法适用于任何提供 `<Plug>` 映射或命令序列的插件。
+
+### maplayer 不做什么
+
+**maplayer 设计用于全局按键绑定管理。** 它不直接支持缓冲区局部映射（即 `buffer = true` 选项），因为这会使全局按键绑定协调变得复杂。
+
+#### 使用 make() 实现缓冲区局部映射
+
+如果你需要缓冲区局部按键绑定，可以使用 `make()` 生成按键映射并通过 `autocmd` 注册它们：
+
+```lua
+local maplayer = require('maplayer')
+
+-- 为特定文件类型生成按键映射
+local markdown_maps = maplayer.make({
+  {
+    key = '<CR>',
+    mode = 'n',
+    desc = '跟随链接',
+    handler = function()
+      -- Markdown 特定逻辑
+      vim.cmd('normal! gx')
+      return true
+    end,
+  },
+})
+
+-- 从 opts 中移除 buffer 字段并使用 autocmd 注册
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'markdown',
+  callback = function(args)
+    for _, spec in ipairs(markdown_maps) do
+      -- 如果 opts 中存在 buffer 字段，清除它
+      local opts = vim.tbl_extend('force', spec.opts, { buffer = args.buf })
+      vim.keymap.set(spec.mode, spec.lhs, spec.rhs, opts)
+    end
+  end,
+})
+```
+
+这种模式允许你：
+- 为缓冲区局部按键绑定使用 maplayer 的条件处理器链
+- 保持责任链模式
+- 通过 autocmd 仅为特定缓冲区设置按键绑定
+
 ### 调试
 
-> **🚧 路线图**：内置的调试功能计划在未来版本中发布。
+maplayer.nvim 包含内置的日志系统，帮助你调试按键绑定配置。
 
-现在，你可以在处理器中添加日志记录来调试按键绑定行为：
+#### 启用日志
+
+要启用日志，在 `setup()` 函数中传入 `log` 配置：
+
+```lua
+require('maplayer').setup({
+  -- 可选：启用日志
+  log = {
+    enabled = true,
+    level = 'DEBUG',  -- 选项: 'DEBUG', 'INFO', 'WARN', 'ERROR'
+  },
+  -- 你的按键绑定
+  {
+    key = '<leader>ff',
+    mode = 'n',
+    desc = '查找文件',
+    handler = function()
+      require('telescope.builtin').find_files()
+      return true
+    end,
+  },
+})
+```
+
+#### 日志级别
+
+日志系统支持四个详细程度级别：
+
+- **`DEBUG`**：最详细 - 记录每次条件检查、处理器执行和返回值
+- **`INFO`**：记录按键按下和哪些处理器成功（默认不使用）
+- **`WARN`**：仅记录警告
+- **`ERROR`**：仅记录错误
+
+**注意**：默认情况下，仅使用 DEBUG 级别的日志进行详细故障排除。
+
+#### 日志输出
+
+启用日志后，消息将写入到 Neovim 的日志文件。你可以使用 `:lua print(vim.fn.stdpath('log'))` 查看日志文件位置，或使用 `:messages` 查看消息。
+
+示例日志消息：
+
+```
+[maplayer] [DEBUG] Registering key binding: <Tab> mode: i descriptions: { "接受补全", "跳转到下一个代码片段占位符" }
+[maplayer] [DEBUG] Key pressed: <Tab> in mode: i
+[maplayer] [DEBUG] Trying handler 1 for key <Tab>
+[maplayer] [DEBUG] Checking mode for key <Tab> desc: 接受补全 mode_ok: true
+[maplayer] [DEBUG] Checking condition for key <Tab> desc: 接受补全 condition: true
+[maplayer] [DEBUG] Executing handler for key <Tab> desc: 接受补全
+[maplayer] [DEBUG] Handler result for key <Tab> desc: 接受补全 result: true
+[maplayer] [DEBUG] Handler 1 succeeded for key <Tab> return value: true
+```
+
+**注意**：DEBUG 级别的消息会记录到 Neovim 日志文件中，也可以通过 `:messages` 查看。WARN 和 ERROR 消息还会在编辑器中显示为通知。
+
+#### 高级用法
+
+你也可以在处理器中添加自定义日志：
 
 ```lua
 require('maplayer').setup({
@@ -459,27 +651,6 @@ require('maplayer').setup({
       print('当前缓冲区：', vim.api.nvim_get_current_buf())
       print('当前文件类型：', vim.bo.filetype)
       -- 你的实际处理器逻辑在这里
-      return true
-    end,
-  },
-})
-```
-
-你还可以检查条件是否被正确评估：
-
-```lua
-require('maplayer').setup({
-  {
-    key = '<Tab>',
-    mode = 'i',
-    desc = '条件处理器',
-    condition = function()
-      local result = vim.fn.pumvisible() == 1
-      print('条件结果：', result)  -- 调试输出
-      return result
-    end,
-    handler = function()
-      print('处理器运行中')  -- 调试输出
       return true
     end,
   },

@@ -6,17 +6,25 @@
 --- @field key string The key to be mapped
 --- @field mode? string|string[] Default to 'n'
 --- @field desc? string Default to ''
---- @field condition? fun(): boolean Default to a function always returning true
+--- @field condition? fun(): boolean|boolean Default to a function always returning true
 --- @field priority? integer Default to 0
 --- @field noremap? boolean Default to true
 --- @field remap? boolean Default to false
 --- @field replace_keycodes? boolean Default to true
 --- @field handler MapLayer.HandlerFunc|string
 
+--- @class MapLayer.LogConfig
+--- @field enabled? boolean Enable or disable logging (default: false)
+--- @field level? number|string Log level: 'DEBUG', 'INFO', 'WARN', 'ERROR', or number (default: 'INFO')
+
+--- @class MapLayer.SetupOpts : MapLayer.KeySpec[]
+--- @field log? MapLayer.LogConfig Logger configuration
+
 --- @class MapLayer.MergedHandlerFunc
 --- @field handler MapLayer.HandlerFunc
 --- @field remap boolean
 --- @field replace_keycodes boolean
+--- @field desc string Original description for debugging
 
 --- @class MapLayer.MergedKeySpec
 --- @field key string
