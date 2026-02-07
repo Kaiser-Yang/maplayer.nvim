@@ -592,23 +592,7 @@ Use this parameter when:
 - You want to preserve Vim's count behavior (e.g., `5j` to move down 5 lines)
 - The underlying operation should be repeated or scaled by the count value
 
-**Example with autopairs:**
-
-If you're using a plugin like nvim-autopairs with custom `<Plug>` mappings that support count, you would also set `count = true`:
-
-```lua
-require('maplayer').setup({
-  {
-    key = '<M-e>',
-    mode = 'i',
-    desc = 'Fast wrap',
-    -- Only set count = true if your specific <Plug> mapping supports it
-    handler = function()
-      require('nvim-autopairs.fastwrap').setup({})
-      return '<Plug>(fastwrap)'
-    end,
-  },
-})
+**Note:** Most `<Plug>` mappings from plugins don't require the `count` parameter unless they specifically support count prefixes. Always check the plugin's documentation to determine if a mapping is count-aware before enabling this feature.
 
 ### What maplayer Doesn't Do
 

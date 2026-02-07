@@ -592,23 +592,7 @@ require('maplayer').setup({
 - 你想保留 Vim 的 count 行为（例如，`5j` 向下移动 5 行）
 - 底层操作应该被 count 值重复或缩放
 
-**autopairs 示例：**
-
-如果你使用像 nvim-autopairs 这样的插件，并且有支持 count 的自定义 `<Plug>` 映射，你也需要设置 `count = true`：
-
-```lua
-require('maplayer').setup({
-  {
-    key = '<M-e>',
-    mode = 'i',
-    desc = '快速包裹',
-    -- 仅在你的特定 <Plug> 映射支持 count 时才设置 count = true
-    handler = function()
-      require('nvim-autopairs.fastwrap').setup({})
-      return '<Plug>(fastwrap)'
-    end,
-  },
-})
+**注意：** 大多数插件的 `<Plug>` 映射不需要 `count` 参数，除非它们特别支持 count 前缀。在启用此功能之前，请始终查看插件文档以确定映射是否支持 count。
 
 ### maplayer 不做什么
 
