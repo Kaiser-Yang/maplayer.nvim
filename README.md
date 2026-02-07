@@ -193,6 +193,7 @@ Each keybinding specification is a table with the following fields:
 | `noremap` | `boolean` | `true` | Whether to use non-recursive mapping |
 | `remap` | `boolean` | `false` | Whether to allow remapping (opposite of `noremap`) |
 | `replace_keycodes` | `boolean` | `true` | Whether to replace keycodes in returned strings |
+| `count` | `boolean` | `false` | When `true` and handler returns a non-empty string, prepends `vim.v.count` to the string before feeding keys (only when `vim.v.count > 0`). Useful for `<Plug>` mappings that support count |
 
 ### Handler Return Values
 
@@ -535,6 +536,63 @@ require('maplayer').setup({
 ```
 
 This approach works for any plugin that provides `<Plug>` mappings or command sequences.
+
+#### Example: Using Count with Plug Mappings
+
+Many Vim plugins provide `<Plug>` mappings that support Vim's count feature. The `count` parameter is particularly useful for these mappings, such as those from [dial.nvim](https://github.com/monaqa/dial.nvim) for incrementing/decrementing, or other plugins with count-aware operations.
+
+Here's an example of lazy loading a plugin with count-aware `<Plug>` mappings:
+
+```lua
+-- In your lazy.nvim config
+{
+  'monaqa/dial.nvim',
+  lazy = true,
+}
+
+-- In your maplayer setup
+require('maplayer').setup({
+  {
+    key = '<C-a>',
+    mode = 'n',
+    desc = 'Increment number',
+    count = true,  -- Enable count support
+    handler = function()
+      require('dial.map')  -- Lazy loads the plugin
+      return '<Plug>(dial-increment)'
+    end,
+  },
+  {
+    key = '<C-x>',
+    mode = 'n',
+    desc = 'Decrement number',
+    count = true,  -- Enable count support
+    handler = function()
+      require('dial.map')
+      return '<Plug>(dial-decrement)'
+    end,
+  },
+})
+```
+
+**Why use `count = true`?**
+
+When you set `count = true`, typing `3<C-a>` will:
+1. Capture the count value `3` from `vim.v.count`
+2. Execute the handler which returns `'<Plug>(dial-increment)'`
+3. Prepend the count to create `'3<Plug>(dial-increment)'`
+4. Feed this combined string to Vim
+
+This allows the `<Plug>` mapping to receive the count, enabling operations like "increment 3 times" or "decrement 5 times" to work correctly. Without `count = true`, the count would be lost and the `<Plug>` mapping would only execute once.
+
+**When to use `count = true`:**
+
+Use this parameter when:
+- The `<Plug>` mapping or command accepts a count prefix
+- You want to preserve Vim's count behavior (e.g., `5j` to move down 5 lines)
+- The underlying operation should be repeated or scaled by the count value
+
+**Note:** Most `<Plug>` mappings from plugins don't require the `count` parameter unless they specifically support count prefixes. Always check the plugin's documentation to determine if a mapping is count-aware before enabling this feature.
 
 ### What maplayer Doesn't Do
 

@@ -193,6 +193,7 @@ end
 | `noremap` | `boolean` | `true` | 是否使用非递归映射 |
 | `remap` | `boolean` | `false` | 是否允许重新映射（与 `noremap` 相反） |
 | `replace_keycodes` | `boolean` | `true` | 是否替换返回字符串中的键码 |
+| `count` | `boolean` | `false` | 当设置为 `true` 且处理器返回非空字符串时，会在 `vim.v.count > 0` 的情况下将 `vim.v.count` 转换成字符串并拼接在返回字符串前面再进行 feed keys 操作。对于支持 count 的 `<Plug>` 映射非常有用 |
 
 ### 处理器返回值
 
@@ -535,6 +536,63 @@ require('maplayer').setup({
 ```
 
 这种方法适用于任何提供 `<Plug>` 映射或命令序列的插件。
+
+#### 示例：为 Plug 映射使用 count
+
+许多 Vim 插件提供支持 Vim count 功能的 `<Plug>` 映射。`count` 参数对于这些映射特别有用，例如来自 [dial.nvim](https://github.com/monaqa/dial.nvim) 的增减操作映射，或其他具有支持 count 操作的插件。
+
+以下是懒加载提供支持 count 的 `<Plug>` 映射的插件示例：
+
+```lua
+-- 在你的 lazy.nvim 配置中
+{
+  'monaqa/dial.nvim',
+  lazy = true,
+}
+
+-- 在你的 maplayer 设置中
+require('maplayer').setup({
+  {
+    key = '<C-a>',
+    mode = 'n',
+    desc = '增加数字',
+    count = true,  -- 启用 count 支持
+    handler = function()
+      require('dial.map')  -- 懒加载插件
+      return '<Plug>(dial-increment)'
+    end,
+  },
+  {
+    key = '<C-x>',
+    mode = 'n',
+    desc = '减少数字',
+    count = true,  -- 启用 count 支持
+    handler = function()
+      require('dial.map')
+      return '<Plug>(dial-decrement)'
+    end,
+  },
+})
+```
+
+**为什么使用 `count = true`？**
+
+当你设置 `count = true` 时，输入 `3<C-a>` 将会：
+1. 从 `vim.v.count` 捕获 count 值 `3`
+2. 执行处理器并返回 `'<Plug>(dial-increment)'`
+3. 将 count 拼接在前面创建 `'3<Plug>(dial-increment)'`
+4. 将这个组合字符串输入给 Vim
+
+这允许 `<Plug>` 映射接收 count，使得"增加 3 次"或"减少 5 次"等操作能够正常工作。如果没有 `count = true`，count 会丢失，`<Plug>` 映射只会执行一次。
+
+**何时使用 `count = true`：**
+
+在以下情况下使用此参数：
+- `<Plug>` 映射或命令接受 count 前缀
+- 你想保留 Vim 的 count 行为（例如，`5j` 向下移动 5 行）
+- 底层操作应该被 count 值重复或缩放
+
+**注意：** 大多数插件的 `<Plug>` 映射不需要 `count` 参数，除非它们特别支持 count 前缀。在启用此功能之前，请始终查看插件文档以确定映射是否支持 count。
 
 ### maplayer 不做什么
 

@@ -94,6 +94,7 @@ local function normalise_key(t)
     key_spec.noremap = key_spec.noremap == nil and true or key_spec.noremap
     key_spec.remap = key_spec.remap or false
     key_spec.replace_keycodes = key_spec.replace_keycodes == nil and true or key_spec.replace_keycodes
+    key_spec.count = key_spec.count or false
 
     -- Normalize condition: convert boolean to function
     local original_condition = key_spec.condition
@@ -136,6 +137,7 @@ local function normalise_key(t)
               handler = key_spec.handler,
               remap = key_spec.remap or key_spec.noremap == false,
               replace_keycodes = key_spec.replace_keycodes,
+              count = key_spec.count,
               desc = key_spec.desc,
             },
           },
@@ -148,6 +150,7 @@ local function normalise_key(t)
           handler = key_spec.handler,
           remap = key_spec.remap or key_spec.noremap == false,
           replace_keycodes = key_spec.replace_keycodes,
+          count = key_spec.count,
           desc = key_spec.desc,
         })
       end
@@ -175,8 +178,14 @@ local function handler_wrap(key_spec)
       if ret then
         logger.debug('Handler', idx, 'succeeded for key', key_spec.key, 'return value:', ret)
         if type(ret) == 'string' then
-          logger.debug('Feeding keys:', ret, 'remap:', handler.remap, 'replace_keycodes:', handler.replace_keycodes)
-          util.feedkeys(ret, (handler.remap and 'm' or 'n') .. 't', handler.replace_keycodes)
+          -- Prepend count if count flag is true and vim.v.count > 0
+          local keys_to_feed = ret
+          if handler.count and vim.v.count > 0 then
+            keys_to_feed = tostring(vim.v.count) .. ret
+            logger.debug('Prepending count:', vim.v.count, 'to keys:', ret)
+          end
+          logger.debug('Feeding keys:', keys_to_feed, 'remap:', handler.remap, 'replace_keycodes:', handler.replace_keycodes)
+          util.feedkeys(keys_to_feed, (handler.remap and 'm' or 'n') .. 't', handler.replace_keycodes)
         end
         return
       end

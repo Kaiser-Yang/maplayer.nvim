@@ -11,6 +11,7 @@
 --- @field noremap? boolean Default to true
 --- @field remap? boolean Default to false
 --- @field replace_keycodes? boolean Default to true
+--- @field count? boolean Default to false. When true, prepends vim.v.count to the returned string when vim.v.count > 0
 --- @field handler MapLayer.HandlerFunc|string
 
 --- @class MapLayer.LogConfig
@@ -24,6 +25,7 @@
 --- @field handler MapLayer.HandlerFunc
 --- @field remap boolean
 --- @field replace_keycodes boolean
+--- @field count boolean
 --- @field desc string Original description for debugging
 
 --- @class MapLayer.MergedKeySpec
