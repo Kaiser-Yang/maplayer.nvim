@@ -87,18 +87,33 @@ local function normalise_key(t)
       end
     end
     key_spec.mode = mode_expanded
-    key_spec.desc = key_spec.desc or ''
+    local original_desc = key_spec.desc or ''
+    key_spec.desc = original_desc
     -- NOTE: Add idx here to make "sort" stable
     key_spec.priority = (key_spec.priority or 0) + idx
     key_spec.noremap = key_spec.noremap == nil and true or key_spec.noremap
     key_spec.remap = key_spec.remap or false
     key_spec.replace_keycodes = key_spec.replace_keycodes == nil and true or key_spec.replace_keycodes
-    key_spec.condition = key_spec.condition or function() return true end
+
+    -- Normalize condition: convert boolean to function
+    local original_condition = key_spec.condition
+    if original_condition == nil then
+      key_spec.condition = function() return true end
+    elseif type(original_condition) == 'boolean' then
+      local condition_value = original_condition
+      key_spec.condition = function() return condition_value end
+    end
+
+    -- Store original handler before wrapping
+    local original_handler = key_spec.handler
     if type(key_spec.handler) == 'string' then
       local value = tostring(key_spec.handler)
       key_spec.handler = function() return value end
     end
-    key_spec.handler = condition_wrap(key_spec.mode, key_spec.condition, key_spec.handler, key_spec.key, key_spec.desc)
+    key_spec.handler = condition_wrap(key_spec.mode, key_spec.condition, key_spec.handler, key_spec.key, original_desc)
+    -- Store original desc for later use
+    key_spec._original_desc = original_desc
+    key_spec._original_handler = original_handler
   end
   table.sort(t, function(a, b)
     if a.key ~= b.key then return a.key < b.key end
@@ -126,6 +141,7 @@ local function normalise_key(t)
               handler = key_spec.handler,
               remap = key_spec.remap or key_spec.noremap == false,
               replace_keycodes = key_spec.replace_keycodes,
+              desc = key_spec._original_desc,
             },
           },
         }
@@ -137,6 +153,7 @@ local function normalise_key(t)
           handler = key_spec.handler,
           remap = key_spec.remap or key_spec.noremap == false,
           replace_keycodes = key_spec.replace_keycodes,
+          desc = key_spec._original_desc,
         })
       end
     end

@@ -443,6 +443,142 @@ end
 - 使用 which-key 的分组和显示功能组织按键绑定
 - 为实际的按键处理逻辑保持 maplayer 的责任链模式
 
+### 使用 maplayer 实现插件懒加载
+
+**maplayer.nvim** 可以为大多数不依赖 `autocmd` 事件的插件实现懒加载。通过延迟插件加载直到第一次按键，你可以显著提升 Neovim 的启动速度。
+
+#### 工作原理
+
+使用 [lazy.nvim](https://github.com/folke/lazy.nvim) 时，你可以：
+1. 为插件设置 `lazy = true`
+2. 禁用插件的默认按键绑定
+3. 使用 maplayer 处理器，仅在需要时 `require()` 插件
+4. 返回插件的按键序列（如 `<Plug>` 映射）
+
+在首次按键时，lazy.nvim 会在调用 `require()` 时自动加载插件。
+
+#### 示例：懒加载 nvim-surround
+
+[nvim-surround](https://github.com/kylechui/nvim-surround) 提供用于文本环绕操作的 `<Plug>` 映射。以下是如何使用 maplayer 懒加载它：
+
+```lua
+-- 在你的 lazy.nvim 配置中
+{
+  'kylechui/nvim-surround',
+  lazy = true,
+  opts = {
+    keymaps = {
+      -- 禁用所有默认按键映射
+      insert = false,
+      insert_line = false,
+      normal = false,
+      normal_cur = false,
+      normal_line = false,
+      normal_cur_line = false,
+      visual = false,
+      visual_line = false,
+      delete = false,
+      change = false,
+      change_line = false,
+    },
+  },
+}
+
+-- 在你的 maplayer 设置中
+require('maplayer').setup({
+  {
+    key = 'ys',
+    mode = 'n',
+    desc = '添加环绕',
+    handler = function()
+      require('nvim-surround')  -- 懒加载插件
+      return '<Plug>(nvim-surround-normal)'
+    end,
+  },
+  {
+    key = 'yss',
+    mode = 'n',
+    desc = '为整行添加环绕',
+    handler = function()
+      require('nvim-surround')
+      return '<Plug>(nvim-surround-normal-cur)'
+    end,
+  },
+  {
+    key = 'ds',
+    mode = 'n',
+    desc = '删除环绕',
+    handler = function()
+      require('nvim-surround')
+      return '<Plug>(nvim-surround-delete)'
+    end,
+  },
+  {
+    key = 'cs',
+    mode = 'n',
+    desc = '更改环绕',
+    handler = function()
+      require('nvim-surround')
+      return '<Plug>(nvim-surround-change)'
+    end,
+  },
+  {
+    key = 'S',
+    mode = 'x',
+    desc = '在可视模式下添加环绕',
+    handler = function()
+      require('nvim-surround')
+      return '<Plug>(nvim-surround-visual)'
+    end,
+  },
+})
+```
+
+这种方法适用于任何提供 `<Plug>` 映射或命令序列的插件。
+
+### maplayer 不做什么
+
+**maplayer 设计用于全局按键绑定管理。** 它不直接支持缓冲区局部映射（即 `buffer = true` 选项），因为这会使全局按键绑定协调变得复杂。
+
+#### 使用 make() 实现缓冲区局部映射
+
+如果你需要缓冲区局部按键绑定，可以使用 `make()` 生成按键映射并通过 `autocmd` 注册它们：
+
+```lua
+local maplayer = require('maplayer')
+
+-- 为特定文件类型生成按键映射
+local markdown_maps = maplayer.make({
+  {
+    key = '<CR>',
+    mode = 'n',
+    desc = '跟随链接',
+    handler = function()
+      -- Markdown 特定逻辑
+      vim.cmd('normal! gx')
+      return true
+    end,
+  },
+})
+
+-- 从 opts 中移除 buffer 字段并使用 autocmd 注册
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'markdown',
+  callback = function(args)
+    for _, spec in ipairs(markdown_maps) do
+      -- 如果 opts 中存在 buffer 字段，清除它
+      local opts = vim.tbl_extend('force', spec.opts, { buffer = args.buf })
+      vim.keymap.set(spec.mode, spec.lhs, spec.rhs, opts)
+    end
+  end,
+})
+```
+
+这种模式允许你：
+- 为缓冲区局部按键绑定使用 maplayer 的条件处理器链
+- 保持责任链模式
+- 通过 autocmd 仅为特定缓冲区设置按键绑定
+
 ### 调试
 
 maplayer.nvim 包含内置的日志系统，帮助你调试按键绑定配置。

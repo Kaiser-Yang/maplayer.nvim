@@ -443,6 +443,142 @@ This delayed binding approach lets you:
 - Organize keybindings with which-key's grouping and display features
 - Maintain maplayer's chain of responsibility pattern for the actual key handling logic
 
+### Lazy Loading Plugins with maplayer
+
+**maplayer.nvim** enables lazy loading for most plugins that don't rely on `autocmd` events. By deferring plugin loading until the first key press, you can significantly improve Neovim's startup time.
+
+#### How It Works
+
+When using [lazy.nvim](https://github.com/folke/lazy.nvim), you can:
+1. Set `lazy = true` for the plugin
+2. Disable the plugin's default keybindings
+3. Use maplayer handlers that `require()` the plugin only when needed
+4. Return the plugin's key sequence (like `<Plug>` mappings)
+
+On first keypress, lazy.nvim loads the plugin automatically when `require()` is called.
+
+#### Example: Lazy Loading nvim-surround
+
+[nvim-surround](https://github.com/kylechui/nvim-surround) provides `<Plug>` mappings for text surrounding operations. Here's how to lazy load it with maplayer:
+
+```lua
+-- In your lazy.nvim config
+{
+  'kylechui/nvim-surround',
+  lazy = true,
+  opts = {
+    keymaps = {
+      -- Disable all default keymaps
+      insert = false,
+      insert_line = false,
+      normal = false,
+      normal_cur = false,
+      normal_line = false,
+      normal_cur_line = false,
+      visual = false,
+      visual_line = false,
+      delete = false,
+      change = false,
+      change_line = false,
+    },
+  },
+}
+
+-- In your maplayer setup
+require('maplayer').setup({
+  {
+    key = 'ys',
+    mode = 'n',
+    desc = 'Add surround',
+    handler = function()
+      require('nvim-surround')  -- Lazy loads the plugin
+      return '<Plug>(nvim-surround-normal)'
+    end,
+  },
+  {
+    key = 'yss',
+    mode = 'n',
+    desc = 'Add surround to line',
+    handler = function()
+      require('nvim-surround')
+      return '<Plug>(nvim-surround-normal-cur)'
+    end,
+  },
+  {
+    key = 'ds',
+    mode = 'n',
+    desc = 'Delete surround',
+    handler = function()
+      require('nvim-surround')
+      return '<Plug>(nvim-surround-delete)'
+    end,
+  },
+  {
+    key = 'cs',
+    mode = 'n',
+    desc = 'Change surround',
+    handler = function()
+      require('nvim-surround')
+      return '<Plug>(nvim-surround-change)'
+    end,
+  },
+  {
+    key = 'S',
+    mode = 'x',
+    desc = 'Add surround in visual mode',
+    handler = function()
+      require('nvim-surround')
+      return '<Plug>(nvim-surround-visual)'
+    end,
+  },
+})
+```
+
+This approach works for any plugin that provides `<Plug>` mappings or command sequences.
+
+### What maplayer Doesn't Do
+
+**maplayer is designed for global keybindings management.** It doesn't support buffer-local mappings directly (i.e., `buffer = true` option), as this would complicate the global keybinding coordination.
+
+#### Buffer-Local Mappings with make()
+
+If you need buffer-local keybindings, you can use `make()` to generate keymaps and register them with `autocmd`:
+
+```lua
+local maplayer = require('maplayer')
+
+-- Generate keymaps for a specific filetype
+local markdown_maps = maplayer.make({
+  {
+    key = '<CR>',
+    mode = 'n',
+    desc = 'Follow link',
+    handler = function()
+      -- Markdown-specific logic
+      vim.cmd('normal! gx')
+      return true
+    end,
+  },
+})
+
+-- Remove buffer field from opts and register with autocmd
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'markdown',
+  callback = function(args)
+    for _, spec in ipairs(markdown_maps) do
+      -- Clear the buffer field if it exists in opts
+      local opts = vim.tbl_extend('force', spec.opts, { buffer = args.buf })
+      vim.keymap.set(spec.mode, spec.lhs, spec.rhs, opts)
+    end
+  end,
+})
+```
+
+This pattern allows you to:
+- Use maplayer's conditional handler chains for buffer-local keybindings
+- Maintain the chain of responsibility pattern
+- Set keybindings only for specific buffers via autocmd
+
 ### Debugging
 
 maplayer.nvim includes a built-in logging system to help you debug your keybinding configurations.
