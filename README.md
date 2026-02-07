@@ -193,6 +193,7 @@ Each keybinding specification is a table with the following fields:
 | `noremap` | `boolean` | `true` | Whether to use non-recursive mapping |
 | `remap` | `boolean` | `false` | Whether to allow remapping (opposite of `noremap`) |
 | `replace_keycodes` | `boolean` | `true` | Whether to replace keycodes in returned strings |
+| `count` | `boolean` | `false` | When `true` and handler returns a non-empty string, prepends `vim.v.count` to the string before feeding keys (only when `vim.v.count > 0`). Useful for `<Plug>` mappings that support count |
 
 ### Handler Return Values
 
@@ -535,6 +536,75 @@ require('maplayer').setup({
 ```
 
 This approach works for any plugin that provides `<Plug>` mappings or command sequences.
+
+#### Example: Lazy Loading nvim-autopairs with Count Support
+
+[nvim-autopairs](https://github.com/windwp/nvim-autopairs) provides `<Plug>` mappings that support Vim's count feature. The `count` parameter is particularly useful for line-related operations like `<Plug>(dial-increment)`, `<Plug>(dial-decrement)`, or similar mappings that accept a count prefix.
+
+Here's an example of lazy loading a plugin that provides count-aware `<Plug>` mappings:
+
+```lua
+-- In your lazy.nvim config
+{
+  'some-plugin/plugin-name',
+  lazy = true,
+  opts = {
+    -- Disable default keymaps
+  },
+}
+
+-- In your maplayer setup
+require('maplayer').setup({
+  {
+    key = '<C-a>',
+    mode = 'n',
+    desc = 'Increment number',
+    count = true,  -- Enable count support
+    handler = function()
+      require('some-plugin')  -- Lazy loads the plugin
+      return '<Plug>(some-plugin-increment)'
+    end,
+  },
+  {
+    key = '<C-x>',
+    mode = 'n',
+    desc = 'Decrement number',
+    count = true,  -- Enable count support
+    handler = function()
+      require('some-plugin')
+      return '<Plug>(some-plugin-decrement)'
+    end,
+  },
+})
+```
+
+**Why use `count = true`?**
+
+When you set `count = true`, typing `3<C-a>` will:
+1. Capture the count value `3` from `vim.v.count`
+2. Execute the handler which returns `'<Plug>(some-plugin-increment)'`
+3. Prepend the count to create `'3<Plug>(some-plugin-increment)'`
+4. Feed this combined string to Vim
+
+This allows the `<Plug>` mapping to receive the count, enabling operations like "increment 3 times" or "decrement 5 times" to work correctly. Without `count = true`, the count would be lost and the `<Plug>` mapping would only execute once.
+
+**Real-world example with autopairs:**
+
+For plugins like nvim-autopairs that have line-related operations (e.g., moving between brackets on different lines), you would set `count = true` to preserve the count behavior:
+
+```lua
+require('maplayer').setup({
+  {
+    key = '<M-e>',
+    mode = 'i',
+    desc = 'Fast wrap',
+    count = true,  -- Preserves count for line-aware operations
+    handler = function()
+      require('nvim-autopairs.fastwrap').setup({})
+      return '<Plug>(fastwrap)'
+    end,
+  },
+})
 
 ### What maplayer Doesn't Do
 

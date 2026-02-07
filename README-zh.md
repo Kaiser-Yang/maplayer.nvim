@@ -193,6 +193,7 @@ end
 | `noremap` | `boolean` | `true` | 是否使用非递归映射 |
 | `remap` | `boolean` | `false` | 是否允许重新映射（与 `noremap` 相反） |
 | `replace_keycodes` | `boolean` | `true` | 是否替换返回字符串中的键码 |
+| `count` | `boolean` | `false` | 当设置为 `true` 且处理器返回非空字符串时，会在 `vim.v.count > 0` 的情况下将 `vim.v.count` 转换成字符串并拼接在返回字符串前面再进行 feed keys 操作。对于支持 count 的 `<Plug>` 映射非常有用 |
 
 ### 处理器返回值
 
@@ -535,6 +536,75 @@ require('maplayer').setup({
 ```
 
 这种方法适用于任何提供 `<Plug>` 映射或命令序列的插件。
+
+#### 示例：带有 count 支持的 nvim-autopairs 懒加载
+
+[nvim-autopairs](https://github.com/windwp/nvim-autopairs) 提供支持 Vim count 功能的 `<Plug>` 映射。`count` 参数对于支持行相关操作的映射特别有用，比如 `<Plug>(dial-increment)`、`<Plug>(dial-decrement)` 或类似的接受 count 前缀的映射。
+
+以下是懒加载提供支持 count 的 `<Plug>` 映射的插件示例：
+
+```lua
+-- 在你的 lazy.nvim 配置中
+{
+  'some-plugin/plugin-name',
+  lazy = true,
+  opts = {
+    -- 禁用默认按键映射
+  },
+}
+
+-- 在你的 maplayer 设置中
+require('maplayer').setup({
+  {
+    key = '<C-a>',
+    mode = 'n',
+    desc = '增加数字',
+    count = true,  -- 启用 count 支持
+    handler = function()
+      require('some-plugin')  -- 懒加载插件
+      return '<Plug>(some-plugin-increment)'
+    end,
+  },
+  {
+    key = '<C-x>',
+    mode = 'n',
+    desc = '减少数字',
+    count = true,  -- 启用 count 支持
+    handler = function()
+      require('some-plugin')
+      return '<Plug>(some-plugin-decrement)'
+    end,
+  },
+})
+```
+
+**为什么使用 `count = true`？**
+
+当你设置 `count = true` 时，输入 `3<C-a>` 将会：
+1. 从 `vim.v.count` 捕获 count 值 `3`
+2. 执行处理器并返回 `'<Plug>(some-plugin-increment)'`
+3. 将 count 拼接在前面创建 `'3<Plug>(some-plugin-increment)'`
+4. 将这个组合字符串输入给 Vim
+
+这允许 `<Plug>` 映射接收 count，使得"增加 3 次"或"减少 5 次"等操作能够正常工作。如果没有 `count = true`，count 会丢失，`<Plug>` 映射只会执行一次。
+
+**autopairs 的实际示例：**
+
+对于像 nvim-autopairs 这样具有与行相关操作（例如，在不同行的括号之间移动）的插件，你需要设置 `count = true` 来保留 count 行为：
+
+```lua
+require('maplayer').setup({
+  {
+    key = '<M-e>',
+    mode = 'i',
+    desc = '快速包裹',
+    count = true,  -- 保留 count 用于行相关操作
+    handler = function()
+      require('nvim-autopairs.fastwrap').setup({})
+      return '<Plug>(fastwrap)'
+    end,
+  },
+})
 
 ### maplayer 不做什么
 
