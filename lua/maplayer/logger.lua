@@ -17,9 +17,7 @@ local config = {
 }
 
 --- Initialize the logger with configuration
---- @param opts? table Configuration options
---- @param opts.enabled? boolean Enable or disable logging (default: false)
---- @param opts.level? number|string Log level (default: INFO)
+--- @param opts? MapLayer.LogConfig Configuration options
 function M.setup(opts)
   opts = opts or {}
   config.enabled = opts.enabled ~= nil and opts.enabled or false
@@ -30,6 +28,17 @@ end
 --- @param level number The log level to check
 --- @return boolean
 local function should_log(level) return config.enabled and level >= config.level end
+
+local function _write(level, msg)
+  if not should_log(level) then return end
+  local f, err = io.open(M.filepath, 'a')
+  if not f then
+    vim.notify(string.format('Failed to open log file %s: %s', M.filepath, err), vim.log.levels.ERROR)
+    return
+  end
+  f:write(msg)
+  f:close()
+end
 
 --- Format a log message
 --- @param level_name string The log level name
@@ -52,42 +61,18 @@ end
 
 --- Log a debug message
 --- @param ... any Message parts
-function M.debug(...)
-  if should_log(M.levels.DEBUG) then
-    local msg = format_message('DEBUG', ...)
-    -- Write to Neovim's log file
-    vim.notify(msg, vim.log.levels.DEBUG)
-  end
-end
+function M.debug(...) _write(M.levels.DEBUG, format_message('DEBUG', ...)) end
 
 --- Log an info message
 --- @param ... any Message parts
-function M.info(...)
-  if should_log(M.levels.INFO) then
-    local msg = format_message('INFO', ...)
-    -- Write to Neovim's log file
-    vim.notify(msg, vim.log.levels.INFO)
-  end
-end
+function M.info(...) _write(M.levels.INFO, format_message('INFO', ...)) end
 
 --- Log a warning message
 --- @param ... any Message parts
-function M.warn(...)
-  if should_log(M.levels.WARN) then vim.notify(format_message('WARN', ...), vim.log.levels.WARN) end
-end
+function M.warn(...) _write(M.levels.WARN, format_message('WARN', ...)) end
 
 --- Log an error message
 --- @param ... any Message parts
-function M.error(...)
-  if should_log(M.levels.ERROR) then vim.notify(format_message('ERROR', ...), vim.log.levels.ERROR) end
-end
-
---- Check if logging is enabled
---- @return boolean
-function M.is_enabled() return config.enabled end
-
---- Get the current log level
---- @return number
-function M.get_level() return config.level end
+function M.error(...) _write(M.levels.ERROR, format_message('ERROR', ...)) end
 
 return M
