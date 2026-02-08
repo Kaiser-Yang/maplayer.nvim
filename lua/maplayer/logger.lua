@@ -31,7 +31,7 @@ local function should_log(level) return config.enabled and level >= config.level
 
 local function _write(level, msg)
   if not should_log(level) then return end
-  local f, err = io.open(M.filepath, 'a')
+  local f, err = io.open(vim.fn.stdpath('log') .. '/lightboat.log', 'a')
   if not f then
     vim.notify(string.format('Failed to open log file %s: %s', M.filepath, err), vim.log.levels.ERROR)
     return
