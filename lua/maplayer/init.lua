@@ -83,7 +83,7 @@ local function normalise_key(t)
         m = { 'i', 'c' }
       end
       for _, mm in ipairs(util.ensure_list(m)) do
-        table.insert(mode_expanded, mm)
+        if not vim.tbl_contains(mode_expanded, mm) then table.insert(mode_expanded, mm) end
       end
     end
     key_spec.mode = mode_expanded
@@ -127,33 +127,17 @@ local function normalise_key(t)
       --- @type table<string, MapLayer.MergedKeySpec>
       local tmp = res[m]
       local key = key_spec.key
-      if not tmp[key] then
-        tmp[key] = {
-          key = key,
-          mode = m,
-          desc = { key_spec.desc },
-          handler = {
-            {
-              handler = key_spec.handler,
-              remap = key_spec.remap or key_spec.noremap == false,
-              replace_keycodes = key_spec.replace_keycodes,
-              count = key_spec.count,
-              desc = key_spec.desc,
-            },
-          },
-        }
-      else
-        assert(key == tmp[key].key)
-        assert(m == tmp[key].mode)
-        if not vim.tbl_contains(tmp[key].desc, key_spec.desc) then table.insert(tmp[key].desc, key_spec.desc) end
-        table.insert(tmp[key].handler, {
-          handler = key_spec.handler,
-          remap = key_spec.remap or key_spec.noremap == false,
-          replace_keycodes = key_spec.replace_keycodes,
-          count = key_spec.count,
-          desc = key_spec.desc,
-        })
-      end
+      if not tmp[key] then tmp[key] = { key = key, mode = m, desc = {}, handler = {} } end
+      assert(key == tmp[key].key)
+      assert(m == tmp[key].mode)
+      if not vim.tbl_contains(tmp[key].desc, key_spec.desc) then table.insert(tmp[key].desc, key_spec.desc) end
+      table.insert(tmp[key].handler, {
+        handler = key_spec.handler,
+        remap = key_spec.remap or key_spec.noremap == false,
+        replace_keycodes = key_spec.replace_keycodes,
+        count = key_spec.count,
+        desc = key_spec.desc,
+      })
     end
   end
   return res
@@ -184,7 +168,14 @@ local function handler_wrap(key_spec)
             keys_to_feed = tostring(vim.v.count) .. ret
             logger.debug('Prepending count:', vim.v.count, 'to keys:', ret)
           end
-          logger.debug('Feeding keys:', keys_to_feed, 'remap:', handler.remap, 'replace_keycodes:', handler.replace_keycodes)
+          logger.debug(
+            'Feeding keys:',
+            keys_to_feed,
+            'remap:',
+            handler.remap,
+            'replace_keycodes:',
+            handler.replace_keycodes
+          )
           util.feedkeys(keys_to_feed, (handler.remap and 'm' or 'n') .. 't', handler.replace_keycodes)
         end
         return
@@ -235,6 +226,7 @@ function M.setup(opt)
   -- Extract and configure logger if log config is provided
   if opt.log then
     local log_opts = opt.log
+    assert(log_opts ~= nil)
     -- Convert string level to number if needed
     if type(log_opts.level) == 'string' then
       local level_num = logger.levels[log_opts.level:upper()]
