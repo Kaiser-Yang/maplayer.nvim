@@ -213,7 +213,7 @@ local function handler_wrap(key_spec)
       logger.debug('All handlers declined for key', key_spec.key, 'executing fallback function')
       local success, result = pcall(fallback)
       if not success then
-        logger.debug('Fallback function error:', result)
+        logger.error('Fallback function error for key', key_spec.key, ':', result)
         vim.notify('maplayer: fallback function error: ' .. tostring(result), vim.log.levels.ERROR)
         return
       end
@@ -229,6 +229,9 @@ local function handler_wrap(key_spec)
         -- Feedkeys with key and replace_keycodes from table
         logger.debug('Fallback function returned table with key:', result.key)
         util.feedkeys(result.key, 'nt', result.replace_keycodes)
+      else
+        -- Unexpected return type
+        logger.warn('Fallback function returned unexpected type:', type(result), 'for key', key_spec.key)
       end
     end
   end
