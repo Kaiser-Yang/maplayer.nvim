@@ -96,6 +96,11 @@ local function normalise_key(t)
     key_spec.replace_keycodes = key_spec.replace_keycodes == nil and true or key_spec.replace_keycodes
     key_spec.count = key_spec.count or false
 
+    -- Normalize fallback: default to true (fallback to original key)
+    if key_spec.fallback == nil then
+      key_spec.fallback = true
+    end
+
     -- Normalize condition: convert boolean to function
     local original_condition = key_spec.condition
     if original_condition == nil then
@@ -127,7 +132,9 @@ local function normalise_key(t)
       --- @type table<string, MapLayer.MergedKeySpec>
       local tmp = res[m]
       local key = key_spec.key
-      if not tmp[key] then tmp[key] = { key = key, mode = m, desc = {}, handler = {} } end
+      if not tmp[key] then
+        tmp[key] = { key = key, mode = m, desc = {}, handler = {}, fallback = key_spec.fallback }
+      end
       assert(key == tmp[key].key)
       assert(m == tmp[key].mode)
       if not vim.tbl_contains(tmp[key].desc, key_spec.desc) then table.insert(tmp[key].desc, key_spec.desc) end
@@ -182,9 +189,42 @@ local function handler_wrap(key_spec)
       end
       logger.debug('Handler', idx, 'declined for key', key_spec.key)
     end
-    -- Always fallback to the default key when failure
-    logger.debug('All handlers declined for key', key_spec.key, 'falling back to default behavior')
-    util.feedkeys(key_spec.key, 'nt')
+    -- Handle fallback based on the fallback option
+    local fallback = key_spec.fallback
+    if fallback == false then
+      -- No fallback
+      logger.debug('All handlers declined for key', key_spec.key, 'no fallback configured')
+      return
+    elseif fallback == true then
+      -- Fallback to default key
+      logger.debug('All handlers declined for key', key_spec.key, 'falling back to default key')
+      util.feedkeys(key_spec.key, 'nt')
+    elseif type(fallback) == 'string' then
+      -- Fallback to the specified string
+      logger.debug('All handlers declined for key', key_spec.key, 'falling back with string:', fallback)
+      util.feedkeys(fallback, 'nt', true)
+    elseif type(fallback) == 'table' then
+      -- Fallback to table with key and replace_keycodes
+      logger.debug('All handlers declined for key', key_spec.key, 'falling back with table key:', fallback.key)
+      util.feedkeys(fallback.key, 'nt', fallback.replace_keycodes)
+    elseif type(fallback) == 'function' then
+      -- Execute the function and handle the result
+      logger.debug('All handlers declined for key', key_spec.key, 'executing fallback function')
+      local result = fallback()
+      if result == nil then
+        -- No fallback
+        logger.debug('Fallback function returned nil, no fallback')
+        return
+      elseif type(result) == 'string' then
+        -- Feedkeys the returned string
+        logger.debug('Fallback function returned string:', result)
+        util.feedkeys(result, 'nt', true)
+      elseif type(result) == 'table' then
+        -- Feedkeys with key and replace_keycodes from table
+        logger.debug('Fallback function returned table with key:', result.key)
+        util.feedkeys(result.key, 'nt', result.replace_keycodes)
+      end
+    end
   end
 end
 

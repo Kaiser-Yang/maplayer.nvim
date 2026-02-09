@@ -2,6 +2,14 @@
 
 --- @alias MapLayer.HandlerFunc fun(): MapLayer.HandlerReturn
 
+--- @class MapLayer.FallbackTable
+--- @field key string The key to feedkeys
+--- @field replace_keycodes boolean Whether to replace keycodes
+
+--- @alias MapLayer.FallbackFunc fun(): string|MapLayer.FallbackTable|nil
+
+--- @alias MapLayer.Fallback boolean|string|MapLayer.FallbackTable|MapLayer.FallbackFunc
+
 --- @class MapLayer.KeySpec
 --- @field key string The key to be mapped
 --- @field mode? string|string[] Default to 'n'
@@ -12,6 +20,7 @@
 --- @field remap? boolean Default to false
 --- @field replace_keycodes? boolean Default to true
 --- @field count? boolean Default to false. When true, prepends vim.v.count to the returned string when vim.v.count > 0
+--- @field fallback? MapLayer.Fallback Default to true. Controls fallback behavior when all handlers decline
 --- @field handler MapLayer.HandlerFunc|string
 
 --- @class MapLayer.LogConfig
@@ -33,6 +42,7 @@
 --- @field mode string
 --- @field desc string[]
 --- @field handler MapLayer.MergedHandlerFunc[]
+--- @field fallback MapLayer.Fallback The fallback option (uses the one from the highest priority handler)
 
 --- @class MapLayer.MapSetArg
 --- @field mode string[]
