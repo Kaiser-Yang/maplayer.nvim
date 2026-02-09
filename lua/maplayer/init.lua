@@ -206,6 +206,10 @@ local function handler_wrap(key_spec)
       util.feedkeys(fallback, 'nt', true)
     elseif type(fallback) == 'table' then
       -- Fallback to table with key and replace_keycodes
+      if type(fallback.key) ~= 'string' then
+        logger.error('Fallback table missing or invalid "key" field for key', key_spec.key)
+        return
+      end
       logger.debug('All handlers declined for key', key_spec.key, 'falling back with table key:', fallback.key)
       util.feedkeys(fallback.key, 'nt', fallback.replace_keycodes)
     elseif type(fallback) == 'function' then
@@ -227,6 +231,10 @@ local function handler_wrap(key_spec)
         util.feedkeys(result, 'nt', true)
       elseif type(result) == 'table' then
         -- Feedkeys with key and replace_keycodes from table
+        if type(result.key) ~= 'string' then
+          logger.error('Fallback function returned table with missing or invalid "key" field for key', key_spec.key)
+          return
+        end
         logger.debug('Fallback function returned table with key:', result.key)
         util.feedkeys(result.key, 'nt', result.replace_keycodes)
       else
