@@ -133,6 +133,7 @@ local function normalise_key(t)
       local tmp = res[m]
       local key = key_spec.key
       if not tmp[key] then
+        -- Use fallback from the highest priority handler (first in sorted order)
         tmp[key] = { key = key, mode = m, desc = {}, handler = {}, fallback = key_spec.fallback }
       end
       assert(key == tmp[key].key)
@@ -210,7 +211,12 @@ local function handler_wrap(key_spec)
     elseif type(fallback) == 'function' then
       -- Execute the function and handle the result
       logger.debug('All handlers declined for key', key_spec.key, 'executing fallback function')
-      local result = fallback()
+      local success, result = pcall(fallback)
+      if not success then
+        logger.debug('Fallback function error:', result)
+        vim.notify('maplayer: fallback function error: ' .. tostring(result), vim.log.levels.ERROR)
+        return
+      end
       if result == nil then
         -- No fallback
         logger.debug('Fallback function returned nil, no fallback')
