@@ -202,6 +202,8 @@ local function handler_wrap(key_spec)
       util.feedkeys(key_spec.key, 'nt')
     elseif type(fallback) == 'string' then
       -- Fallback to the specified string
+      -- Note: String fallback always uses replace_keycodes=true for convenience.
+      -- Use table fallback if you need replace_keycodes=false.
       logger.debug('All handlers declined for key', key_spec.key, 'falling back with string:', fallback)
       util.feedkeys(fallback, 'nt', true)
     elseif type(fallback) == 'table' then
@@ -229,6 +231,8 @@ local function handler_wrap(key_spec)
         return
       elseif type(result) == 'string' then
         -- Feedkeys the returned string
+        -- Note: String return always uses replace_keycodes=true for convenience.
+        -- Return a table if you need replace_keycodes=false.
         logger.debug('Fallback function returned string:', result)
         util.feedkeys(result, 'nt', true)
       elseif type(result) == 'table' then

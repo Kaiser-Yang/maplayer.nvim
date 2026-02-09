@@ -11,9 +11,9 @@
 --- Fallback behavior when all handlers decline for a key.
 --- Can be one of the following:
 --- - boolean: true (default) = fallback to original key, false = no fallback
---- - string: feedkeys this string with replace_keycodes enabled
---- - table: {key: string, replace_keycodes: boolean} for custom feedkeys
---- - function: executed to return string, table, or nil (no fallback)
+--- - string: feedkeys this string (always with replace_keycodes=true)
+--- - table: {key: string, replace_keycodes: boolean} for custom feedkeys behavior
+--- - function: executed to return string (replace_keycodes=true), table, or nil (no fallback)
 --- @alias MapLayer.Fallback boolean|string|MapLayer.FallbackTable|MapLayer.FallbackFunc
 
 --- @class MapLayer.KeySpec
