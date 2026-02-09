@@ -133,7 +133,7 @@ local function normalise_key(t)
       local tmp = res[m]
       local key = key_spec.key
       if not tmp[key] then
-        -- Use fallback from the highest priority handler (first in sorted order)
+        -- Use fallback from the highest priority handler (first after sorting by priority)
         tmp[key] = { key = key, mode = m, desc = {}, handler = {}, fallback = key_spec.fallback }
       end
       assert(key == tmp[key].key)
@@ -211,7 +211,9 @@ local function handler_wrap(key_spec)
         return
       end
       logger.debug('All handlers declined for key', key_spec.key, 'falling back with table key:', fallback.key)
-      util.feedkeys(fallback.key, 'nt', fallback.replace_keycodes)
+      -- Default replace_keycodes to true if not specified
+      local replace_keycodes = fallback.replace_keycodes == nil and true or fallback.replace_keycodes
+      util.feedkeys(fallback.key, 'nt', replace_keycodes)
     elseif type(fallback) == 'function' then
       -- Execute the function and handle the result
       logger.debug('All handlers declined for key', key_spec.key, 'executing fallback function')
@@ -236,7 +238,9 @@ local function handler_wrap(key_spec)
           return
         end
         logger.debug('Fallback function returned table with key:', result.key)
-        util.feedkeys(result.key, 'nt', result.replace_keycodes)
+        -- Default replace_keycodes to true if not specified
+        local replace_keycodes = result.replace_keycodes == nil and true or result.replace_keycodes
+        util.feedkeys(result.key, 'nt', replace_keycodes)
       else
         -- Unexpected return type
         logger.warn('Fallback function returned unexpected type:', type(result), 'for key', key_spec.key)
