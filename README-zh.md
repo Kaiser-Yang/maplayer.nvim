@@ -194,6 +194,7 @@ end
 | `remap` | `boolean` | `false` | 是否允许重新映射（与 `noremap` 相反） |
 | `replace_keycodes` | `boolean` | `true` | 是否替换返回字符串中的键码 |
 | `count` | `boolean` | `false` | 当设置为 `true` 且处理器返回非空字符串时，会在 `vim.v.count > 0` 的情况下将 `vim.v.count` 转换成字符串并拼接在返回字符串前面再进行 feed keys 操作。对于支持 count 的 `<Plug>` 映射非常有用 |
+| `fallback` | `boolean \| string \| table \| function` | `true` | 控制所有处理器拒绝时的回退行为（见[回退行为](#回退行为)） |
 
 ### 处理器返回值
 
@@ -213,6 +214,76 @@ end
   - `''` - 普通、可视、选择和操作待定模式
   - `'!'` - 插入和命令行模式
   - `'v'` - 可视和选择模式
+
+### 回退行为
+
+`fallback` 字段控制当所有处理器都拒绝时会发生什么。它支持多种类型：
+
+#### 布尔类型
+- **`true`**（默认）：回退到原始按键的默认行为
+- **`false`**：无回退 - 当所有处理器拒绝时，按键不执行任何操作
+
+```lua
+{
+  key = '<leader>x',
+  fallback = false,  -- 如果处理器拒绝则不执行任何操作
+  handler = function() ... end,
+}
+```
+
+#### 字符串类型
+当所有处理器拒绝时，将指定的字符串作为按键输入。始终使用 `replace_keycodes=true` 和 `remap=false` 以方便使用。
+
+```lua
+{
+  key = '<leader>x',
+  fallback = 'i回退文本！<Esc>',  -- 插入文本作为回退
+  handler = function() ... end,
+}
+```
+
+#### 表类型
+提供对回退行为的完全控制，包含以下字段：
+- `key`（字符串，**必需**）：要输入的按键序列
+- `replace_keycodes`（布尔，默认 `true`）：是否替换像 `<CR>`、`<Esc>` 等的键码
+- `remap`（布尔，默认 `false`）：是否允许重新映射
+
+```lua
+{
+  key = '<leader>x',
+  fallback = {
+    key = '<Plug>(my-plugin-command)',
+    replace_keycodes = true,
+    remap = true,  -- 允许触发 <Plug> 映射
+  },
+  handler = function() ... end,
+}
+```
+
+#### 函数类型
+执行函数以动态确定回退行为。函数可以返回：
+- **`string`**：输入该字符串（使用 `replace_keycodes=true`、`remap=false`）
+- **`table`**：与上述表回退格式相同
+- **`nil`**：无回退
+
+```lua
+{
+  key = '<leader>x',
+  fallback = function()
+    -- 基于上下文的动态回退
+    if vim.fn.line('.') == 1 then
+      return 'i第一行！<Esc>'
+    elseif vim.bo.filetype == 'lua' then
+      return { key = '<Plug>(lua-action)', remap = true }
+    else
+      return nil  -- 其他情况下无回退
+    end
+  end,
+  handler = function() ... end,
+}
+```
+
+**注意**：当为同一个按键定义多个具有不同优先级的处理器时，使用**最高优先级处理器**的回退。
 
 ## 示例：超级超级 Tab 键
 
