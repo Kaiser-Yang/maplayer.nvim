@@ -5,15 +5,16 @@
 --- @class MapLayer.FallbackTable
 --- @field key string The key to feedkeys
 --- @field replace_keycodes boolean Whether to replace keycodes
+--- @field remap? boolean Whether to allow remapping (default: false)
 
 --- @alias MapLayer.FallbackFunc fun(): string|MapLayer.FallbackTable|nil
 
 --- Fallback behavior when all handlers decline for a key.
 --- Can be one of the following:
 --- - boolean: true (default) = fallback to original key, false = no fallback
---- - string: feedkeys this string (always with replace_keycodes=true)
---- - table: {key: string, replace_keycodes: boolean} for custom feedkeys behavior
---- - function: executed to return string (replace_keycodes=true), table, or nil (no fallback)
+--- - string: feedkeys this string (always with replace_keycodes=true, remap=false)
+--- - table: {key: string, replace_keycodes: boolean, remap: boolean} for custom feedkeys behavior
+--- - function: executed to return string (replace_keycodes=true, remap=false), table, or nil (no fallback)
 --- @alias MapLayer.Fallback boolean|string|MapLayer.FallbackTable|MapLayer.FallbackFunc
 
 --- @class MapLayer.KeySpec

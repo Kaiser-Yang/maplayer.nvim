@@ -220,7 +220,10 @@ local function handler_wrap(key_spec)
       logger.debug('All handlers declined for key', key_spec.key, 'falling back with table key:', fallback.key)
       -- Default replace_keycodes to true if not specified
       local replace_keycodes = fallback.replace_keycodes == nil and true or fallback.replace_keycodes
-      util.feedkeys(fallback.key, 'nt', replace_keycodes)
+      -- Default remap to false if not specified
+      local remap = fallback.remap or false
+      local mode = (remap and 'm' or 'n') .. 't'
+      util.feedkeys(fallback.key, mode, replace_keycodes)
     elseif type(fallback) == 'function' then
       -- Execute the function and handle the result
       logger.debug('All handlers declined for key', key_spec.key, 'executing fallback function')
@@ -254,7 +257,10 @@ local function handler_wrap(key_spec)
         logger.debug('Fallback function returned table with key:', result.key)
         -- Default replace_keycodes to true if not specified
         local replace_keycodes = result.replace_keycodes == nil and true or result.replace_keycodes
-        util.feedkeys(result.key, 'nt', replace_keycodes)
+        -- Default remap to false if not specified
+        local remap = result.remap or false
+        local mode = (remap and 'm' or 'n') .. 't'
+        util.feedkeys(result.key, mode, replace_keycodes)
       else
         -- Unexpected return type
         logger.warn('Fallback function returned unexpected type:', type(result), 'for key', key_spec.key)
