@@ -194,6 +194,7 @@ Each keybinding specification is a table with the following fields:
 | `remap` | `boolean` | `false` | Whether to allow remapping (opposite of `noremap`) |
 | `replace_keycodes` | `boolean` | `true` | Whether to replace keycodes in returned strings |
 | `count` | `boolean` | `false` | When `true` and handler returns a non-empty string, prepends `vim.v.count` to the string before feeding keys (only when `vim.v.count > 0`). Useful for `<Plug>` mappings that support count |
+| `fallback` | `boolean \| string \| table \| function` | `true` | Controls fallback behavior when all handlers decline (see [Fallback Behavior](#fallback-behavior)) |
 
 ### Handler Return Values
 
@@ -213,6 +214,76 @@ The `mode` field accepts:
   - `''` - Normal, Visual, Select, and Operator-pending modes
   - `'!'` - Insert and Command-line modes
   - `'v'` - Visual and Select modes
+
+### Fallback Behavior
+
+The `fallback` field controls what happens when all handlers decline for a key. It supports multiple types:
+
+#### Boolean
+- **`true`** (default): Falls back to the original key's default behavior
+- **`false`**: No fallback - the key does nothing when all handlers decline
+
+```lua
+{
+  key = '<leader>x',
+  fallback = false,  -- Do nothing if handler declines
+  handler = function() ... end,
+}
+```
+
+#### String
+Feeds the specified string as keys when all handlers decline. Always uses `replace_keycodes=true` and `remap=false` for convenience.
+
+```lua
+{
+  key = '<leader>x',
+  fallback = 'iFallback!<Esc>',  -- Insert text as fallback
+  handler = function() ... end,
+}
+```
+
+#### Table
+Provides full control over fallback behavior with the following fields:
+- `key` (string, **required**): The key sequence to feed
+- `replace_keycodes` (boolean, default `true`): Whether to replace keycodes like `<CR>`, `<Esc>`, etc.
+- `remap` (boolean, default `false`): Whether to allow remapping
+
+```lua
+{
+  key = '<leader>x',
+  fallback = {
+    key = 'dd',  -- Delete line (uses existing dd mapping)
+    replace_keycodes = true,
+    remap = true,  -- Allow remapping if dd is custom-mapped
+  },
+  handler = function() ... end,
+}
+```
+
+#### Function
+Executes the function to dynamically determine fallback behavior. The function can return:
+- **`string`**: Feeds the string (with `replace_keycodes=true`, `remap=false`)
+- **`table`**: Same format as the table fallback above
+- **`nil`**: No fallback
+
+```lua
+{
+  key = '<leader>x',
+  fallback = function()
+    -- Dynamic fallback based on context
+    if vim.fn.line('.') == 1 then
+      return 'iFirst line!<Esc>'
+    elseif vim.bo.filetype == 'lua' then
+      return { key = 'dd', remap = true }  -- Use remapped dd if available
+    else
+      return nil  -- No fallback in other cases
+    end
+  end,
+  handler = function() ... end,
+}
+```
+
+**Note**: When multiple handlers are defined for the same key with different priorities, the fallback from the **highest priority handler** is used.
 
 ## Example: A Super Super Tab
 
