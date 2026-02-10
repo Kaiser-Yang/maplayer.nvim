@@ -252,9 +252,9 @@ Provides full control over fallback behavior with the following fields:
 {
   key = '<leader>x',
   fallback = {
-    key = '<Plug>(my-plugin-command)',
+    key = 'dd',  -- Delete line (uses existing dd mapping)
     replace_keycodes = true,
-    remap = true,  -- Allow the <Plug> mapping to be triggered
+    remap = true,  -- Allow remapping if dd is custom-mapped
   },
   handler = function() ... end,
 }
@@ -274,7 +274,7 @@ Executes the function to dynamically determine fallback behavior. The function c
     if vim.fn.line('.') == 1 then
       return 'iFirst line!<Esc>'
     elseif vim.bo.filetype == 'lua' then
-      return { key = '<Plug>(lua-action)', remap = true }
+      return { key = 'dd', remap = true }  -- Use remapped dd if available
     else
       return nil  -- No fallback in other cases
     end

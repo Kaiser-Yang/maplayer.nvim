@@ -252,9 +252,9 @@ end
 {
   key = '<leader>x',
   fallback = {
-    key = '<Plug>(my-plugin-command)',
+    key = 'dd',  -- 删除行（使用现有的 dd 映射）
     replace_keycodes = true,
-    remap = true,  -- 允许触发 <Plug> 映射
+    remap = true,  -- 如果 dd 被自定义映射，允许重新映射
   },
   handler = function() ... end,
 }
@@ -274,7 +274,7 @@ end
     if vim.fn.line('.') == 1 then
       return 'i第一行！<Esc>'
     elseif vim.bo.filetype == 'lua' then
-      return { key = '<Plug>(lua-action)', remap = true }
+      return { key = 'dd', remap = true }  -- 如果可用，使用重映射的 dd
     else
       return nil  -- 其他情况下无回退
     end
