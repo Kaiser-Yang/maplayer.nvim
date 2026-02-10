@@ -221,7 +221,7 @@ local function handler_wrap(key_spec)
       -- Default replace_keycodes to true if not specified
       local replace_keycodes = fallback.replace_keycodes == nil and true or fallback.replace_keycodes
       -- Default remap to false if not specified
-      local remap = fallback.remap or false
+      local remap = fallback.remap == nil and false or fallback.remap
       local mode = (remap and 'm' or 'n') .. 't'
       util.feedkeys(fallback.key, mode, replace_keycodes)
     elseif type(fallback) == 'function' then
@@ -258,7 +258,7 @@ local function handler_wrap(key_spec)
         -- Default replace_keycodes to true if not specified
         local replace_keycodes = result.replace_keycodes == nil and true or result.replace_keycodes
         -- Default remap to false if not specified
-        local remap = result.remap or false
+        local remap = result.remap == nil and false or result.remap
         local mode = (remap and 'm' or 'n') .. 't'
         util.feedkeys(result.key, mode, replace_keycodes)
       else
