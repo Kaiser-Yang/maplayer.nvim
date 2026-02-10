@@ -96,10 +96,8 @@ local function normalise_key(t)
     key_spec.replace_keycodes = key_spec.replace_keycodes == nil and true or key_spec.replace_keycodes
     key_spec.count = key_spec.count or false
 
-    -- Normalize fallback: default to true (fallback to original key)
-    if key_spec.fallback == nil then
-      key_spec.fallback = true
-    end
+    -- Note: fallback normalization is done later after merging to ensure we only
+    -- default to true if ALL handlers for a key have nil fallback
 
     -- Normalize condition: convert boolean to function
     local original_condition = key_spec.condition
@@ -133,8 +131,13 @@ local function normalise_key(t)
       local tmp = res[m]
       local key = key_spec.key
       if not tmp[key] then
-        -- Use fallback from the highest priority handler (first after sorting by priority)
+        -- Initialize entry for this key
         tmp[key] = { key = key, mode = m, desc = {}, handler = {}, fallback = key_spec.fallback }
+      else
+        -- Update fallback if current entry has no fallback but this handler does
+        if tmp[key].fallback == nil and key_spec.fallback ~= nil then
+          tmp[key].fallback = key_spec.fallback
+        end
       end
       assert(key == tmp[key].key)
       assert(m == tmp[key].mode)
@@ -148,6 +151,16 @@ local function normalise_key(t)
       })
     end
   end
+  
+  -- Default fallback to true for any merged key that still has nil fallback
+  for _, mode_keys in pairs(res) do
+    for _, key_spec in pairs(mode_keys) do
+      if key_spec.fallback == nil then
+        key_spec.fallback = true
+      end
+    end
+  end
+  
   return res
 end
 --- @param key_spec MapLayer.MergedKeySpec
