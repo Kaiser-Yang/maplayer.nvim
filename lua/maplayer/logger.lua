@@ -36,7 +36,7 @@ local function _write(level, msg)
     vim.notify(string.format('Failed to open log file %s: %s', M.filepath, err), vim.log.levels.ERROR)
     return
   end
-  f:write(msg)
+  f:write(msg .. '\n')
   f:close()
 end
 
