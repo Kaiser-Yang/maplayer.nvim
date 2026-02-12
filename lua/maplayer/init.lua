@@ -132,12 +132,11 @@ local function normalise_key(t)
       local key = key_spec.key
       if not tmp[key] then
         -- Initialize entry for this key
-        tmp[key] = { key = key, mode = m, desc = {}, handler = {}, fallback = key_spec.fallback }
+        tmp[key] = { key = key, mode = m, desc = {}, handler = {}, fallback = key_spec.fallback, expr = key_spec.expr }
       else
         -- Update fallback if current entry has no fallback but this handler does
-        if tmp[key].fallback == nil and key_spec.fallback ~= nil then
-          tmp[key].fallback = key_spec.fallback
-        end
+        if tmp[key].fallback == nil and key_spec.fallback ~= nil then tmp[key].fallback = key_spec.fallback end
+        if tmp[key].expr == nil and key_spec.expr ~= nil then tmp[key].expr = key_spec.expr end
       end
       assert(key == tmp[key].key)
       assert(m == tmp[key].mode)
@@ -151,16 +150,15 @@ local function normalise_key(t)
       })
     end
   end
-  
+
   -- Default fallback to true for any merged key that still has nil fallback
   for _, mode_keys in pairs(res) do
     for _, key_spec in pairs(mode_keys) do
-      if key_spec.fallback == nil then
-        key_spec.fallback = true
-      end
+      if key_spec.fallback == nil then key_spec.fallback = true end
+      if key_spec.expr == nil then key_spec.expr = false end
     end
   end
-  
+
   return res
 end
 --- @param key_spec MapLayer.MergedKeySpec
@@ -168,6 +166,7 @@ end
 local function generate_opt(key_spec)
   return {
     desc = table.concat(vim.tbl_filter(function(value) return not value:match('^%s*$') end, key_spec.desc), '; '),
+    expr = key_spec.expr,
   }
 end
 
@@ -197,7 +196,7 @@ local function handler_wrap(key_spec)
             'replace_keycodes:',
             handler.replace_keycodes
           )
-          util.feedkeys(keys_to_feed, (handler.remap and 'm' or 'n') .. 't', handler.replace_keycodes)
+          util.feedkeys(keys_to_feed, (handler.remap and 'm' or 'n'), handler.replace_keycodes)
         end
         return
       end
@@ -212,13 +211,13 @@ local function handler_wrap(key_spec)
     elseif fallback == true then
       -- Fallback to default key
       logger.debug('All handlers declined for key', key_spec.key, 'falling back to default key')
-      util.feedkeys(key_spec.key, 'nt')
+      util.feedkeys(key_spec.key, 'n')
     elseif type(fallback) == 'string' then
       -- Fallback to the specified string
       -- Note: String fallback always uses replace_keycodes=true for convenience.
       -- Use table fallback if you need replace_keycodes=false.
       logger.debug('All handlers declined for key', key_spec.key, 'falling back with string:', fallback)
-      util.feedkeys(fallback, 'nt', true)
+      util.feedkeys(fallback, 'n')
     elseif type(fallback) == 'table' then
       -- Fallback to table with key and replace_keycodes
       if type(fallback.key) ~= 'string' then
@@ -235,7 +234,7 @@ local function handler_wrap(key_spec)
       local replace_keycodes = fallback.replace_keycodes == nil and true or fallback.replace_keycodes
       -- Default remap to false if not specified
       local remap = fallback.remap == nil and false or fallback.remap
-      local mode = (remap and 'm' or 'n') .. 't'
+      local mode = (remap and 'm' or 'n')
       util.feedkeys(fallback.key, mode, replace_keycodes)
     elseif type(fallback) == 'function' then
       -- Execute the function and handle the result
@@ -255,7 +254,7 @@ local function handler_wrap(key_spec)
         -- Note: String return always uses replace_keycodes=true for convenience.
         -- Return a table if you need replace_keycodes=false.
         logger.debug('Fallback function returned string:', result)
-        util.feedkeys(result, 'nt', true)
+        util.feedkeys(result, 'n', true)
       elseif type(result) == 'table' then
         -- Feedkeys with key and replace_keycodes from table
         if type(result.key) ~= 'string' then
@@ -272,7 +271,7 @@ local function handler_wrap(key_spec)
         local replace_keycodes = result.replace_keycodes == nil and true or result.replace_keycodes
         -- Default remap to false if not specified
         local remap = result.remap == nil and false or result.remap
-        local mode = (remap and 'm' or 'n') .. 't'
+        local mode = (remap and 'm' or 'n')
         util.feedkeys(result.key, mode, replace_keycodes)
       else
         -- Unexpected return type

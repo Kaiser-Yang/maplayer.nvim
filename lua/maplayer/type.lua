@@ -25,6 +25,7 @@
 --- @field priority? integer Default to 0
 --- @field noremap? boolean Default to true
 --- @field remap? boolean Default to false
+--- @field expr? boolean Default to false
 --- @field replace_keycodes? boolean Default to true
 --- @field count? boolean Default to false. When true, prepends vim.v.count to the returned string when vim.v.count > 0
 --- @field fallback? MapLayer.Fallback Default to true. Controls fallback behavior when all handlers decline
@@ -48,6 +49,7 @@
 --- @field key string
 --- @field mode string
 --- @field desc string[]
+--- @field expr boolean
 --- @field handler MapLayer.MergedHandlerFunc[]
 --- @field fallback MapLayer.Fallback The fallback option (uses the one from the highest priority handler)
 
