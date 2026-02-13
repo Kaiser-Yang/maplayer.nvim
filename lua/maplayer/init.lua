@@ -129,11 +129,12 @@ local function normalise_key(t)
       local key = key_spec.key
       if not tmp[key] then
         -- Initialize entry for this key
-        tmp[key] = { key = key, mode = m, desc = {}, handler = {}, fallback = key_spec.fallback, expr = key_spec.expr }
+        tmp[key] = { key = key, mode = m, desc = {}, handler = {}, fallback = key_spec.fallback, expr = key_spec.expr, buffer = key_spec.buffer }
       else
         -- Update fallback if current entry has no fallback but this handler does
         if tmp[key].fallback == nil and key_spec.fallback ~= nil then tmp[key].fallback = key_spec.fallback end
         if tmp[key].expr == nil and key_spec.expr ~= nil then tmp[key].expr = key_spec.expr end
+        if tmp[key].buffer == nil and key_spec.buffer ~= nil then tmp[key].buffer = key_spec.buffer end
       end
       assert(key == tmp[key].key)
       assert(m == tmp[key].mode)
@@ -156,6 +157,7 @@ local function generate_opt(key_spec)
   return {
     desc = table.concat(vim.tbl_filter(function(value) return not value:match('^%s*$') end, key_spec.desc), '; '),
     expr = key_spec.expr == nil and false or key_spec.expr,
+    buffer = key_spec.buffer == nil and false or key_spec.buffer,
   }
 end
 
