@@ -49,9 +49,9 @@
 --- @field key string
 --- @field mode string
 --- @field desc string[]
---- @field expr boolean
+--- @field expr? boolean
 --- @field handler MapLayer.MergedHandlerFunc[]
---- @field fallback MapLayer.Fallback The fallback option (uses the one from the highest priority handler)
+--- @field fallback? MapLayer.Fallback The fallback option (uses the one from the highest priority handler)
 
 --- @class MapLayer.MapSetArg
 --- @field mode string[]

@@ -87,17 +87,13 @@ local function normalise_key(t)
       end
     end
     key_spec.mode = mode_expanded
-    local original_desc = key_spec.desc or ''
-    key_spec.desc = original_desc
+    key_spec.desc = key_spec.desc or ''
     -- NOTE: Add idx here to make "sort" stable
     key_spec.priority = (key_spec.priority or 0) + idx
     key_spec.noremap = key_spec.noremap == nil and true or key_spec.noremap
     key_spec.remap = key_spec.remap or false
     key_spec.replace_keycodes = key_spec.replace_keycodes == nil and true or key_spec.replace_keycodes
     key_spec.count = key_spec.count or false
-
-    -- Note: fallback normalization is done later after merging to ensure we only
-    -- default to true if ALL handlers for a key have nil fallback
 
     -- Normalize condition: convert boolean to function
     local original_condition = key_spec.condition
@@ -109,10 +105,11 @@ local function normalise_key(t)
 
     -- Store original handler before wrapping
     if type(key_spec.handler) == 'string' then
-      local value = tostring(key_spec.handler)
+      local value = key_spec.handler
+      ---@diagnostic disable-next-line: return-type-mismatch
       key_spec.handler = function() return value end
     end
-    key_spec.handler = condition_wrap(key_spec.mode, key_spec.condition, key_spec.handler, key_spec.key, original_desc)
+    key_spec.handler = condition_wrap(key_spec.mode, key_spec.condition, key_spec.handler, key_spec.key, key_spec.desc)
   end
   table.sort(t, function(a, b)
     if a.key ~= b.key then return a.key < b.key end
@@ -151,14 +148,6 @@ local function normalise_key(t)
     end
   end
 
-  -- Default fallback to true for any merged key that still has nil fallback
-  for _, mode_keys in pairs(res) do
-    for _, key_spec in pairs(mode_keys) do
-      if key_spec.fallback == nil then key_spec.fallback = true end
-      if key_spec.expr == nil then key_spec.expr = false end
-    end
-  end
-
   return res
 end
 --- @param key_spec MapLayer.MergedKeySpec
@@ -166,7 +155,7 @@ end
 local function generate_opt(key_spec)
   return {
     desc = table.concat(vim.tbl_filter(function(value) return not value:match('^%s*$') end, key_spec.desc), '; '),
-    expr = key_spec.expr,
+    expr = key_spec.expr == nil and false or key_spec.expr,
   }
 end
 
@@ -203,7 +192,7 @@ local function handler_wrap(key_spec)
       logger.debug('Handler', idx, 'declined for key', key_spec.key)
     end
     -- Handle fallback based on the fallback option
-    local fallback = key_spec.fallback
+    local fallback = key_spec.fallback == nil and true or key_spec.fallback
     if fallback == false then
       -- No fallback
       logger.debug('All handlers declined for key', key_spec.key, 'no fallback configured')
