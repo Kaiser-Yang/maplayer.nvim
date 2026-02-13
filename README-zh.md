@@ -192,9 +192,11 @@ end
 | `priority` | `number` | `0` | 优先级高的处理器先评估 |
 | `noremap` | `boolean` | `true` | 是否使用非递归映射 |
 | `remap` | `boolean` | `false` | 是否允许重新映射（与 `noremap` 相反） |
+| `expr` | `boolean` | `false` | 当设置为 `true` 时，处理器将被视为表达式映射（见[表达式映射](#表达式映射)） |
+| `buffer` | `boolean` | `false` | 当设置为 `true` 时，映射将是缓冲区局部的。注意：maplayer 主要设计用于全局映射。对于缓冲区局部映射，请参阅[缓冲区局部映射](#使用-make-实现缓冲区局部映射) |
 | `replace_keycodes` | `boolean` | `true` | 是否替换返回字符串中的键码 |
 | `count` | `boolean` | `false` | 当设置为 `true` 且处理器返回非空字符串时，会在 `vim.v.count > 0` 的情况下将 `vim.v.count` 转换成字符串并拼接在返回字符串前面再进行 feed keys 操作。对于支持 count 的 `<Plug>` 映射非常有用 |
-| `fallback` | `boolean \| string \| table \| function` | `true` | 控制所有处理器拒绝时的回退行为（见[回退行为](#回退行为)） |
+| `fallback` | `boolean` | `string \| table \| function` | `true` | 控制所有处理器拒绝时的回退行为（见[回退行为](#回退行为)） |
 
 ### 处理器返回值
 
@@ -214,6 +216,37 @@ end
   - `''` - 普通、可视、选择和操作待定模式
   - `'!'` - 插入和命令行模式
   - `'v'` - 可视和选择模式
+
+### 表达式映射
+
+`expr` 字段允许你创建表达式映射，类似于 Vim 的 `:map <expr>` 功能。当 `expr = true` 时：
+
+- 处理器函数的返回值**不会**作为按键输入
+- 相反，返回值被视为映射的**结果**
+- 适用于需要根据上下文返回不同按键的动态行为
+
+**示例：上下文感知的回车键**
+
+```lua
+require('maplayer').setup({
+  {
+    key = '<CR>',
+    mode = 'i',
+    expr = true,
+    desc = '智能回车',
+    handler = function()
+      -- 如果补全菜单可见，接受选中的项目
+      if vim.fn.pumvisible() == 1 then
+        return '<C-y>'
+      end
+      -- 否则，只是插入换行
+      return '<CR>'
+    end,
+  },
+})
+```
+
+**注意**：当使用 `expr = true` 时，处理器应该返回一个表示要执行的按键的字符串。该字符串将作为映射的结果使用，而不是反馈到按键队列中。
 
 ### 回退行为
 
@@ -665,13 +698,40 @@ require('maplayer').setup({
 
 **注意：** 大多数插件的 `<Plug>` 映射不需要 `count` 参数，除非它们特别支持 count 前缀。在启用此功能之前，请始终查看插件文档以确定映射是否支持 count。
 
-### maplayer 不做什么
+### 缓冲区局部映射
 
-**maplayer 设计用于全局按键绑定管理。** 它不直接支持缓冲区局部映射（即 `buffer = true` 选项），因为这会使全局按键绑定协调变得复杂。
+### 缓冲区局部映射
 
-#### 使用 make() 实现缓冲区局部映射
+**maplayer 现在支持 `buffer` 字段**用于缓冲区局部映射，但它主要设计用于**全局按键绑定管理**。
 
-如果你需要缓冲区局部按键绑定，可以使用 `make()` 生成按键映射并通过 `autocmd` 注册它们：
+#### 直接使用 `buffer` 字段
+
+你可以在 KeySpec 中设置 `buffer = true` 来创建缓冲区局部映射：
+
+```lua
+require('maplayer').setup({
+  {
+    key = '<CR>',
+    mode = 'n',
+    buffer = true,
+    desc = '跟随链接',
+    handler = function()
+      -- 这将是缓冲区局部的
+      vim.cmd('normal! gx')
+      return true
+    end,
+  },
+})
+```
+
+**重要提示**：当在 `setup()` 中使用 `buffer = true` 时，映射会应用到调用 `setup()` 时的**当前缓冲区**。这意味着：
+- 如果在初始化时调用 `setup()`，它会应用到初始缓冲区
+- 它不会自动应用到之后创建的新缓冲区
+- 对于动态地将映射应用到特定缓冲区类型，请使用下面的 `make()` 方法
+
+#### 使用 make() 实现动态缓冲区局部映射
+
+对于**文件类型特定**或**动态创建的缓冲区局部**按键绑定，使用 `make()` 配合 `autocmd`：
 
 ```lua
 local maplayer = require('maplayer')
@@ -690,12 +750,12 @@ local markdown_maps = maplayer.make({
   },
 })
 
--- 从 opts 中移除 buffer 字段并使用 autocmd 注册
+-- 使用 autocmd 为特定文件类型注册
 vim.api.nvim_create_autocmd('FileType', {
   pattern = 'markdown',
   callback = function(args)
     for _, spec in ipairs(markdown_maps) do
-      -- 如果 opts 中存在 buffer 字段，清除它
+      -- 将 buffer 设置为当前缓冲区以创建缓冲区局部映射
       local opts = vim.tbl_extend('force', spec.opts, { buffer = args.buf })
       vim.keymap.set(spec.mode, spec.lhs, spec.rhs, opts)
     end
@@ -706,7 +766,8 @@ vim.api.nvim_create_autocmd('FileType', {
 这种模式允许你：
 - 为缓冲区局部按键绑定使用 maplayer 的条件处理器链
 - 保持责任链模式
-- 通过 autocmd 仅为特定缓冲区设置按键绑定
+- 自动将按键绑定应用到特定文件类型的缓冲区
+- 在缓冲区创建时动态设置按键绑定
 
 ### 调试
 
