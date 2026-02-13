@@ -193,7 +193,7 @@ end
 | `noremap` | `boolean` | `true` | 是否使用非递归映射 |
 | `remap` | `boolean` | `false` | 是否允许重新映射（与 `noremap` 相反） |
 | `expr` | `boolean` | `false` | 当设置为 `true` 时，处理器将被视为表达式映射（见[表达式映射](#表达式映射)） |
-| `buffer` | `boolean` | `false` | 当设置为 `true` 时，映射将是缓冲区局部的。注意：maplayer 主要设计用于全局映射。对于缓冲区局部映射，请参阅[缓冲区局部映射](#使用-make-实现缓冲区局部映射) |
+| `buffer` | `boolean` | `false` | 当设置为 `true` 时，映射将是缓冲区局部的。注意：maplayer 主要设计用于全局映射。对于缓冲区局部映射，请参阅[缓冲区局部映射](#缓冲区局部映射) |
 | `replace_keycodes` | `boolean` | `true` | 是否替换返回字符串中的键码 |
 | `count` | `boolean` | `false` | 当设置为 `true` 且处理器返回非空字符串时，会在 `vim.v.count > 0` 的情况下将 `vim.v.count` 转换成字符串并拼接在返回字符串前面再进行 feed keys 操作。对于支持 count 的 `<Plug>` 映射非常有用 |
 | `fallback` | `boolean` | `string \| table \| function` | `true` | 控制所有处理器拒绝时的回退行为（见[回退行为](#回退行为)） |
@@ -698,8 +698,6 @@ require('maplayer').setup({
 - 底层操作应该被 count 值重复或缩放
 
 **注意：** 大多数插件的 `<Plug>` 映射不需要 `count` 参数，除非它们特别支持 count 前缀。在启用此功能之前，请始终查看插件文档以确定映射是否支持 count。
-
-### 缓冲区局部映射
 
 ### 缓冲区局部映射
 

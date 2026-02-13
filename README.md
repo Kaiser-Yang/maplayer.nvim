@@ -193,7 +193,7 @@ Each keybinding specification is a table with the following fields:
 | `noremap` | `boolean` | `true` | Whether to use non-recursive mapping |
 | `remap` | `boolean` | `false` | Whether to allow remapping (opposite of `noremap`) |
 | `expr` | `boolean` | `false` | When `true`, the handler is treated as an expression mapping (see [Expression Mappings](#expression-mappings)) |
-| `buffer` | `boolean` | `false` | When `true`, the mapping is buffer-local. Note: maplayer is primarily designed for global mappings. For buffer-local mappings, see [Buffer-Local Mappings](#buffer-local-mappings-with-make) |
+| `buffer` | `boolean` | `false` | When `true`, the mapping is buffer-local. Note: maplayer is primarily designed for global mappings. For buffer-local mappings, see [Buffer-Local Mappings](#buffer-local-mappings) |
 | `replace_keycodes` | `boolean` | `true` | Whether to replace keycodes in returned strings |
 | `count` | `boolean` | `false` | When `true` and handler returns a non-empty string, prepends `vim.v.count` to the string before feeding keys (only when `vim.v.count > 0`). Useful for `<Plug>` mappings that support count |
 | `fallback` | `boolean \| string \| table \| function` | `true` | Controls fallback behavior when all handlers decline (see [Fallback Behavior](#fallback-behavior)) |
@@ -698,8 +698,6 @@ Use this parameter when:
 - The underlying operation should be repeated or scaled by the count value
 
 **Note:** Most `<Plug>` mappings from plugins don't require the `count` parameter unless they specifically support count prefixes. Always check the plugin's documentation to determine if a mapping is count-aware before enabling this feature.
-
-### Buffer-Local Mappings
 
 ### Buffer-Local Mappings
 
