@@ -219,13 +219,14 @@ end
 
 ### 表达式映射
 
-`expr` 字段允许你创建表达式映射，类似于 Vim 的 `:map <expr>` 功能。当 `expr = true` 时：
+`expr` 字段允许你通过在键映射选项中设置 `expr = true` 来创建表达式映射，类似于 Vim 的 `:map <expr>` 功能。
 
-- 处理器函数的返回值**不会**作为按键输入
-- 相反，返回值被视为映射的**结果**
-- 适用于需要根据上下文返回不同按键的动态行为
+**重要提示**：在 maplayer 中使用 `expr = true` 时，行为与标准 Vim 表达式映射不同：
+- 按下按键时会调用处理器函数
+- 如果处理器返回字符串，maplayer 会使用 `feedkeys()` 输入这些按键，而不是将它们返回给 Vim
+- `expr` 标志主要在需要将映射评估为表达式以与其他插件或特定 Vim 行为兼容时有用
 
-**示例：上下文感知的回车键**
+**示例：在 maplayer 中使用 expr**
 
 ```lua
 require('maplayer').setup({
@@ -235,18 +236,18 @@ require('maplayer').setup({
     expr = true,
     desc = '智能回车',
     handler = function()
-      -- 如果补全菜单可见，接受选中的项目
+      -- 如果补全菜单可见，输入 C-y 来接受
       if vim.fn.pumvisible() == 1 then
         return '<C-y>'
       end
-      -- 否则，只是插入换行
+      -- 否则，输入常规回车
       return '<CR>'
     end,
   },
 })
 ```
 
-**注意**：当使用 `expr = true` 时，处理器应该返回一个表示要执行的按键的字符串。该字符串将作为映射的结果使用，而不是反馈到按键队列中。
+**注意**：对于大多数用例，你不需要设置 `expr = true`。默认行为（expr = false）与 maplayer 的处理器链模式配合得很好。只有在需要表达式映射语义以与其他工具或插件兼容时才使用 `expr = true`。
 
 ### 回退行为
 

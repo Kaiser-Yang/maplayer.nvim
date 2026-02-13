@@ -219,13 +219,14 @@ The `mode` field accepts:
 
 ### Expression Mappings
 
-The `expr` field allows you to create expression mappings, similar to Vim's `:map <expr>` feature. When `expr = true`:
+The `expr` field allows you to create expression mappings by setting `expr = true` in the keymap options, similar to Vim's `:map <expr>` feature.
 
-- The handler function's return value is **not** fed as keys
-- Instead, the return value is treated as the **result** of the mapping
-- Useful for dynamic behavior that needs to return different keys based on context
+**Important**: When using `expr = true` with maplayer, the behavior differs from standard Vim expression mappings:
+- The handler function is called when the key is pressed
+- If the handler returns a string, maplayer feeds those keys using `feedkeys()` rather than returning them to Vim
+- The `expr` flag is primarily useful when you need the mapping to be evaluated as an expression for compatibility with other plugins or specific Vim behaviors
 
-**Example: Context-aware Enter key**
+**Example: Using expr with maplayer**
 
 ```lua
 require('maplayer').setup({
@@ -235,18 +236,18 @@ require('maplayer').setup({
     expr = true,
     desc = 'Smart enter',
     handler = function()
-      -- If completion menu is visible, accept the selected item
+      -- If completion menu is visible, feed C-y to accept
       if vim.fn.pumvisible() == 1 then
         return '<C-y>'
       end
-      -- Otherwise, just insert a newline
+      -- Otherwise, feed a regular enter
       return '<CR>'
     end,
   },
 })
 ```
 
-**Note**: When using `expr = true`, the handler should return a string that represents the keys to be executed. The string will be used as the mapping's result, not fed back into the key queue.
+**Note**: For most use cases, you don't need to set `expr = true`. The default behavior (expr = false) works well with maplayer's handler chain pattern. Only use `expr = true` when you specifically need expression mapping semantics for compatibility with other tools or plugins.
 
 ### Fallback Behavior
 
