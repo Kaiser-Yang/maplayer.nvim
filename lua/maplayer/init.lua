@@ -89,7 +89,7 @@ local function normalise_key(t)
     key_spec.mode = mode_expanded
     key_spec.desc = key_spec.desc or ''
     -- NOTE: Add idx here to make "sort" stable
-    key_spec.priority = (key_spec.priority or 0) + idx
+    key_spec.priority = (key_spec.priority or 0) + (#key_spec - idx)
     key_spec.noremap = key_spec.noremap == nil and true or key_spec.noremap
     key_spec.remap = key_spec.remap or false
     key_spec.replace_keycodes = key_spec.replace_keycodes == nil and true or key_spec.replace_keycodes
