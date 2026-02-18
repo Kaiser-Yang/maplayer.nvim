@@ -73,17 +73,21 @@ local function normalise_key(t)
     key_spec.key = lower_bracket(key_spec.key)
     --- @type string[]
     local mode_expanded = {}
-    for _, m in ipairs(util.ensure_list(key_spec.mode or 'n')) do
-      assert(type(m) == 'string')
-      if m == '' then
-        m = { 'n', 'x', 's', 'o' }
-      elseif m == 'v' then
-        m = { 's', 'x' }
-      elseif m == '!' then
-        m = { 'i', 'c' }
-      end
-      for _, mm in ipairs(util.ensure_list(m)) do
-        if not vim.tbl_contains(mode_expanded, mm) then table.insert(mode_expanded, mm) end
+    for _, mode in ipairs(util.ensure_list(key_spec.mode or 'n')) do
+      assert(type(mode) == 'string')
+      if mode == '' then mode = 'nxso' end
+      for _, m in ipairs(vim.split(mode, '')) do
+        local res
+        if m == 'v' then
+          res = { 's', 'x' }
+        elseif m == '!' then
+          res = { 'i', 'c' }
+        else
+          res = { m }
+        end
+        for _, mm in ipairs(res) do
+          if not vim.tbl_contains(mode_expanded, mm) then table.insert(mode_expanded, mm) end
+        end
       end
     end
     key_spec.mode = mode_expanded
@@ -129,7 +133,15 @@ local function normalise_key(t)
       local key = key_spec.key
       if not tmp[key] then
         -- Initialize entry for this key
-        tmp[key] = { key = key, mode = m, desc = {}, handler = {}, fallback = key_spec.fallback, expr = key_spec.expr, buffer = key_spec.buffer }
+        tmp[key] = {
+          key = key,
+          mode = m,
+          desc = {},
+          handler = {},
+          fallback = key_spec.fallback,
+          expr = key_spec.expr,
+          buffer = key_spec.buffer,
+        }
       else
         -- Update fallback if current entry has no fallback but this handler does
         if tmp[key].fallback == nil and key_spec.fallback ~= nil then tmp[key].fallback = key_spec.fallback end
