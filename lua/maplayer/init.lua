@@ -6,18 +6,23 @@ local logger = require('maplayer.logger')
 --- '<M-A>' or '<m-A>', which become '<m-A>',
 --- which is because <m-a> and <M-a> are equivalent in Neovim,
 --- but <m-a> and <m-A> are not.
---- @param s string
---- @return string
+--- @param s string|string[]
+--- @return string[]
 local function lower_bracket(s)
-  local res, _ = s:gsub('%b<>', function(m)
-    local inner = m:sub(2, -2)
-    if inner:match('^[mM]%-%a$') then
-      inner = 'm' .. inner:sub(2)
-    else
-      inner = inner:lower()
-    end
-    return '<' .. inner .. '>'
-  end)
+  local res = {}
+  for _, str in ipairs(util.ensure_list(s)) do
+    assert(type(str) == 'string')
+    local new_str = str:gsub('%b<>', function(m)
+      local inner = m:sub(2, -2)
+      if inner:match('^[mM]%-[a-zA-Z]$') then
+        inner = 'm' .. inner:sub(2)
+      else
+        inner = inner:lower()
+      end
+      return '<' .. inner .. '>'
+    end)
+    table.insert(res, new_str)
+  end
   return res
 end
 
@@ -69,7 +74,8 @@ end
 --- @param t MapLayer.KeySpec[]
 --- @return table<string, table<string, MapLayer.MergedKeySpec>>
 local function normalise_key(t)
-  for idx, key_spec in ipairs(t) do
+  local parsed_t = {}
+  for _, key_spec in ipairs(t) do
     key_spec.key = lower_bracket(key_spec.key)
     --- @type string[]
     local mode_expanded = {}
@@ -92,8 +98,7 @@ local function normalise_key(t)
     end
     key_spec.mode = mode_expanded
     key_spec.desc = key_spec.desc or ''
-    -- NOTE: Add idx here to make "sort" stable
-    key_spec.priority = (key_spec.priority or 0) + (#key_spec - idx)
+    key_spec.priority = key_spec.priority or 0
     key_spec.noremap = key_spec.noremap == nil and true or key_spec.noremap
     key_spec.remap = key_spec.remap or false
     key_spec.replace_keycodes = key_spec.replace_keycodes == nil and true or key_spec.replace_keycodes
@@ -113,7 +118,18 @@ local function normalise_key(t)
       ---@diagnostic disable-next-line: return-type-mismatch
       key_spec.handler = function() return value end
     end
-    key_spec.handler = condition_wrap(key_spec.mode, key_spec.condition, key_spec.handler, key_spec.key, key_spec.desc)
+    for _, key in ipairs(key_spec.key) do
+      local new_spec = vim.deepcopy(key_spec)
+      new_spec.key = key
+      new_spec.handler =
+        condition_wrap(new_spec.mode, new_spec.condition, new_spec.handler, new_spec.key, new_spec.desc)
+      table.insert(parsed_t, new_spec)
+    end
+  end
+  t = parsed_t
+  for idx, key_spec in ipairs(t) do
+    -- NOTE: Add idx here to make "sort" stable
+    key_spec.priority = key_spec.priority + (#t - idx)
   end
   table.sort(t, function(a, b)
     if a.key ~= b.key then return a.key < b.key end

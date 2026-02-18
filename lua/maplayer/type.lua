@@ -18,7 +18,7 @@
 --- @alias MapLayer.Fallback boolean|string|MapLayer.FallbackTable|MapLayer.FallbackFunc
 
 --- @class MapLayer.KeySpec
---- @field key string The key to be mapped
+--- @field key string|string[] The key to be mapped
 --- @field mode? string|string[] Default to 'n'
 --- @field desc? string Default to ''
 --- @field condition? fun(): boolean|boolean Default to a function always returning true
