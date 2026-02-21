@@ -26,46 +26,16 @@ local function lower_bracket(s)
   return res
 end
 
-local m_map = {
-  n = { 'n', 'niI', 'niR', 'niV', 'nt', 'ntT' },
-  x = { 'v', 'V', '', 'vs', 'Vs', 's' },
-  s = { 's', 'S', '' },
-  o = { 'no', 'nov', 'noV', 'no' },
-  i = { 'i', 'ic', 'ix' },
-  c = { 'c', 'cr', 'cv', 'cvr' },
-}
--- INFO:
--- This may be incorrect,
--- because Lang-Arg mode contains modes after hitting f, F, t and T in normal mode
-m_map.l = { unpack(m_map.i), unpack(m_map.c), 'R', 'Rc', 'Rx', 'Rv', 'Rvc', 'Rvx' }
---- @param mode string|string[]
---- @return boolean
-local function check_mode(mode)
-  -- We do not know how to check Lang-Arg mode, just return true
-  if mode == 'l' then return true end
-  local current_mode = vim.api.nvim_get_mode().mode
-  for _, m in ipairs(util.ensure_list(mode)) do
-    if m_map[m] and vim.tbl_contains(m_map[m], current_mode) then return true end
-  end
-  return false
-end
-
 --- @return MapLayer.HandlerFunc
-local function condition_wrap(mode, condition, handler, key, desc)
+local function condition_wrap(condition, handler, key, desc)
   return function()
-    -- NOTE:
-    -- We can not remove the check_mode here, because we can not bind only for Lang-Arg
-    local mode_ok = check_mode(mode)
-    logger.debug('Checking mode for key', key, 'desc:', desc, 'mode_ok:', mode_ok)
-    if mode_ok then
-      local cond_ok = condition()
-      logger.debug('Checking condition for key', key, 'desc:', desc, 'condition:', cond_ok)
-      if cond_ok then
-        logger.debug('Executing handler for key', key, 'desc:', desc)
-        local result = handler()
-        logger.debug('Handler result for key', key, 'desc:', desc, 'result:', result)
-        return result
-      end
+    local cond_ok = condition()
+    logger.debug('Checking condition for key', key, 'desc:', desc, 'condition:', cond_ok)
+    if cond_ok then
+      logger.debug('Executing handler for key', key, 'desc:', desc)
+      local result = handler()
+      logger.debug('Handler result for key', key, 'desc:', desc, 'result:', result)
+      return result
     end
   end
 end
@@ -122,7 +92,7 @@ local function normalise_key(t)
       local new_spec = vim.deepcopy(key_spec)
       new_spec.key = key
       new_spec.handler =
-        condition_wrap(new_spec.mode, new_spec.condition, new_spec.handler, new_spec.key, new_spec.desc)
+        condition_wrap(new_spec.condition, new_spec.handler, new_spec.key, new_spec.desc)
       table.insert(parsed_t, new_spec)
     end
   end
