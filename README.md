@@ -192,6 +192,8 @@ Each keybinding specification is a table with the following fields:
 | `priority` | `number` | `0` | Higher priority handlers are evaluated first |
 | `noremap` | `boolean` | `true` | Whether to use non-recursive mapping |
 | `remap` | `boolean` | `false` | Whether to allow remapping (opposite of `noremap`) |
+| `expr` | `boolean` | `false` | When `true`, the handler is treated as an expression mapping (see [Expression Mappings](#expression-mappings)) |
+| `buffer` | `boolean` | `false` | When `true`, the mapping is buffer-local. Note: maplayer is primarily designed for global mappings. For buffer-local mappings, see [Buffer-Local Mappings](#buffer-local-mappings) |
 | `replace_keycodes` | `boolean` | `true` | Whether to replace keycodes in returned strings |
 | `count` | `boolean` | `false` | When `true` and handler returns a non-empty string, prepends `vim.v.count` to the string before feeding keys (only when `vim.v.count > 0`). Useful for `<Plug>` mappings that support count |
 | `fallback` | `boolean \| string \| table \| function` | `true` | Controls fallback behavior when all handlers decline (see [Fallback Behavior](#fallback-behavior)) |
@@ -214,6 +216,38 @@ The `mode` field accepts:
   - `''` - Normal, Visual, Select, and Operator-pending modes
   - `'!'` - Insert and Command-line modes
   - `'v'` - Visual and Select modes
+
+### Expression Mappings
+
+The `expr` field allows you to create expression mappings by setting `expr = true` in the keymap options, similar to Vim's `:map <expr>` feature.
+
+**Important**: When using `expr = true` with maplayer, the behavior differs from standard Vim expression mappings:
+- The handler function is called when the key is pressed
+- If the handler returns a string, maplayer feeds those keys using `feedkeys()` rather than returning them to Vim
+- The `expr` flag is primarily useful when you need the mapping to be evaluated as an expression for compatibility with other plugins or specific Vim behaviors
+
+**Example: Using expr with maplayer**
+
+```lua
+require('maplayer').setup({
+  {
+    key = '<CR>',
+    mode = 'i',
+    expr = true,
+    desc = 'Smart enter',
+    handler = function()
+      -- If completion menu is visible, feed C-y to accept
+      if vim.fn.pumvisible() == 1 then
+        return '<C-y>'
+      end
+      -- Otherwise, feed a regular enter
+      return '<CR>'
+    end,
+  },
+})
+```
+
+**Note**: For most use cases, you don't need to set `expr = true`. The default behavior (expr = false) works well with maplayer's handler chain pattern. Only use `expr = true` when you specifically need expression mapping semantics for compatibility with other tools or plugins.
 
 ### Fallback Behavior
 
@@ -665,13 +699,38 @@ Use this parameter when:
 
 **Note:** Most `<Plug>` mappings from plugins don't require the `count` parameter unless they specifically support count prefixes. Always check the plugin's documentation to determine if a mapping is count-aware before enabling this feature.
 
-### What maplayer Doesn't Do
+### Buffer-Local Mappings
 
-**maplayer is designed for global keybindings management.** It doesn't support buffer-local mappings directly (i.e., `buffer = true` option), as this would complicate the global keybinding coordination.
+**maplayer now supports the `buffer` field** for buffer-local mappings, but it's primarily designed for **global keybindings management**.
 
-#### Buffer-Local Mappings with make()
+#### Using `buffer` Field Directly
 
-If you need buffer-local keybindings, you can use `make()` to generate keymaps and register them with `autocmd`:
+You can set `buffer = true` in a KeySpec to create buffer-local mappings:
+
+```lua
+require('maplayer').setup({
+  {
+    key = '<CR>',
+    mode = 'n',
+    buffer = true,
+    desc = 'Follow link',
+    handler = function()
+      -- This will be buffer-local
+      vim.cmd('normal! gx')
+      return true
+    end,
+  },
+})
+```
+
+**Important**: When using `buffer = true` with `setup()`, the mapping is applied to the **current buffer** at the time `setup()` is called. This means:
+- If you call `setup()` during initialization, it applies to the initial buffer
+- It won't automatically apply to new buffers created later
+- For dynamically applying mappings to specific buffer types, use the `make()` approach below
+
+#### Dynamic Buffer-Local Mappings with make()
+
+For **filetype-specific** or **dynamically created buffer-local** keybindings, use `make()` with `autocmd`:
 
 ```lua
 local maplayer = require('maplayer')
@@ -690,12 +749,12 @@ local markdown_maps = maplayer.make({
   },
 })
 
--- Remove buffer field from opts and register with autocmd
+-- Register with autocmd for specific filetypes
 vim.api.nvim_create_autocmd('FileType', {
   pattern = 'markdown',
   callback = function(args)
     for _, spec in ipairs(markdown_maps) do
-      -- Clear the buffer field if it exists in opts
+      -- Set buffer to the current buffer for buffer-local mapping
       local opts = vim.tbl_extend('force', spec.opts, { buffer = args.buf })
       vim.keymap.set(spec.mode, spec.lhs, spec.rhs, opts)
     end
@@ -706,7 +765,8 @@ vim.api.nvim_create_autocmd('FileType', {
 This pattern allows you to:
 - Use maplayer's conditional handler chains for buffer-local keybindings
 - Maintain the chain of responsibility pattern
-- Set keybindings only for specific buffers via autocmd
+- Automatically apply keybindings to buffers of specific filetypes
+- Set keybindings dynamically when buffers are created
 
 ### Debugging
 
