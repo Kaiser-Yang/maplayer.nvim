@@ -73,6 +73,7 @@ local function normalise_key(t)
     key_spec.remap = key_spec.remap or false
     key_spec.replace_keycodes = key_spec.replace_keycodes == nil and true or key_spec.replace_keycodes
     key_spec.count = key_spec.count or false
+    key_spec.expr = key_spec.expr or false
 
     -- Normalize condition: convert boolean to function
     local original_condition = key_spec.condition
@@ -82,8 +83,8 @@ local function normalise_key(t)
       key_spec.condition = function() return original_condition end
     end
 
-    -- Store original handler before wrapping
     if type(key_spec.handler) == 'string' then
+      -- Store original handler before wrapping
       local value = key_spec.handler
       ---@diagnostic disable-next-line: return-type-mismatch
       key_spec.handler = function() return value end
@@ -91,8 +92,7 @@ local function normalise_key(t)
     for _, key in ipairs(key_spec.key) do
       local new_spec = vim.deepcopy(key_spec)
       new_spec.key = key
-      new_spec.handler =
-        condition_wrap(new_spec.condition, new_spec.handler, new_spec.key, new_spec.desc)
+      new_spec.handler = condition_wrap(new_spec.condition, new_spec.handler, new_spec.key, new_spec.desc)
       table.insert(parsed_t, new_spec)
     end
   end
