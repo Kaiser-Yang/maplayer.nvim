@@ -28,7 +28,7 @@
 --- @field expr? boolean Default to false
 --- @field buffer? boolean Default to false. When true, the mapping is buffer-local
 --- @field replace_keycodes? boolean Default to true
---- @field fallback? MapLayer.Fallback Default to true. Controls fallback behavior when all handlers decline
+--- @field fallback? MapLayer.Fallback Default to false. Controls fallback behavior when all handlers decline
 --- @field handler MapLayer.HandlerFunc|string
 
 --- @class MapLayer.LogConfig

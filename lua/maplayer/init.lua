@@ -208,7 +208,7 @@ local function handler_wrap(key_spec)
       logger.debug('Handler', idx, 'declined for key', key_spec.key)
     end
     -- Handle fallback based on the fallback option
-    local fallback = key_spec.fallback == nil and true or key_spec.fallback
+    local fallback = key_spec.fallback
     if type(fallback) == 'function' then
       -- Execute the function and handle the result
       logger.debug('All handlers declined for key', key_spec.key, 'executing fallback function')

@@ -219,8 +219,8 @@ The `mode` field accepts:
 The `fallback` field controls what happens when all handlers decline for a key. It supports multiple types:
 
 #### Boolean
-- **`true`** (default): Falls back to the original key's default behavior
-- **`false`**: No fallback - the key does nothing when all handlers decline
+- **`true`**: Falls back to the original key's default behavior
+- **`false`** (default): No fallback - the key does nothing when all handlers decline
 
 ```lua
 {
