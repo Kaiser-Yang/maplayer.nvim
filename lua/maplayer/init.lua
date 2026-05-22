@@ -201,7 +201,7 @@ local function handler_wrap(key_spec)
         logger.debug('Handler', idx, 'succeeded for key', key_spec.key, 'return value:', ret)
         if type(ret) == 'string' then
           logger.debug('Feeding keys:', ret, 'remap:', handler.remap, 'replace_keycodes:', handler.replace_keycodes)
-          return ret
+          util.feedkeys(ret, (handler.remap and 'm' or 'n'), handler.replace_keycodes)
         end
         return
       end
