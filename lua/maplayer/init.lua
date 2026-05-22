@@ -43,7 +43,7 @@ end
 --- Normalise keys in a KeySpec, making sure '<C-A>' and '<c-a>' are treated the same.
 --- @param t MapLayer.KeySpec[]
 --- @return table<string, table<string, MapLayer.MergedKeySpec>>
-local function normalise_key(t)
+local function normalize_key(t)
   local parsed_t = {}
   for _, key_spec in ipairs(t) do
     key_spec.key = lower_bracket(key_spec.key)
@@ -236,7 +236,7 @@ function M.make(opt)
     if type(k) == 'number' then table.insert(keyspecs, v) end
   end
 
-  local normalized_opt = normalise_key(keyspecs)
+  local normalized_opt = normalize_key(keyspecs)
   logger.debug('Normalized keybindings:', normalized_opt)
   for mode, spec in pairs(normalized_opt) do
     for key, key_spec in pairs(spec) do
