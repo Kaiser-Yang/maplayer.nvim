@@ -28,7 +28,6 @@
 --- @field expr? boolean Default to false
 --- @field buffer? boolean Default to false. When true, the mapping is buffer-local
 --- @field replace_keycodes? boolean Default to true
---- @field count? boolean Default to false. When true, prepends vim.v.count to the returned string when vim.v.count > 0
 --- @field fallback? MapLayer.Fallback Default to true. Controls fallback behavior when all handlers decline
 --- @field handler MapLayer.HandlerFunc|string
 
@@ -43,7 +42,6 @@
 --- @field handler MapLayer.HandlerFunc
 --- @field remap boolean
 --- @field replace_keycodes boolean
---- @field count boolean
 --- @field desc string Original description for debugging
 
 --- @class MapLayer.MergedKeySpec

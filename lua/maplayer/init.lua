@@ -72,7 +72,6 @@ local function normalise_key(t)
     key_spec.noremap = key_spec.noremap == nil and true or key_spec.noremap
     key_spec.remap = key_spec.remap or false
     key_spec.replace_keycodes = key_spec.replace_keycodes == nil and true or key_spec.replace_keycodes
-    key_spec.count = key_spec.count or false
     key_spec.expr = key_spec.expr or false
 
     -- Normalize condition: convert boolean to function
@@ -141,7 +140,6 @@ local function normalise_key(t)
         handler = key_spec.handler,
         remap = key_spec.remap or key_spec.noremap == false,
         replace_keycodes = key_spec.replace_keycodes,
-        count = key_spec.count,
         desc = key_spec.desc,
       })
     end
@@ -159,11 +157,6 @@ local function generate_opt(key_spec)
   }
 end
 
-local function count_check(count, ret)
-  if count and vim.v.count > 0 then ret = tostring(vim.v.count) .. ret end
-  return ret
-end
-
 --- @param key_spec MapLayer.MergedKeySpec
 --- @return MapLayer.HandlerFunc
 local function handler_wrap(key_spec)
@@ -176,8 +169,6 @@ local function handler_wrap(key_spec)
       if ret then
         logger.debug('Handler', idx, 'succeeded for key', key_spec.key, 'return value:', ret)
         if type(ret) == 'string' then
-          -- Prepend count if count flag is true and vim.v.count > 0
-          ret = count_check(handler.count, ret)
           logger.debug('Feeding keys:', ret, 'remap:', handler.remap, 'replace_keycodes:', handler.replace_keycodes)
           util.feedkeys(ret, (handler.remap and 'm' or 'n'), handler.replace_keycodes)
         end
