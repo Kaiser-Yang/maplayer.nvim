@@ -1,5 +1,5 @@
 local M = {}
-local util = require('maplayer.util')
+local u = require('maplayer.util')
 local logger = require('maplayer.logger')
 
 --- Make letters inside angle brackets lowercase, except for
@@ -10,7 +10,7 @@ local logger = require('maplayer.logger')
 --- @return string[]
 local function lower_bracket(s)
   local res = {}
-  for _, str in ipairs(util.ensure_list(s)) do
+  for _, str in ipairs(u.ensure_list(s)) do
     assert(type(str) == 'string')
     local new_str = str:gsub('%b<>', function(m)
       local inner = m:sub(2, -2)
@@ -49,7 +49,7 @@ local function normalise_key(t)
     key_spec.key = lower_bracket(key_spec.key)
     --- @type string[]
     local mode_expanded = {}
-    for _, mode in ipairs(util.ensure_list(key_spec.mode or 'n')) do
+    for _, mode in ipairs(u.ensure_list(key_spec.mode or 'n')) do
       assert(type(mode) == 'string')
       if mode == '' then mode = 'nxso' end
       for _, m in ipairs(vim.split(mode, '')) do
@@ -157,6 +157,37 @@ local function generate_opt(key_spec)
   }
 end
 
+--- @param t MapLayer.FallbackTable
+--- @return string, string, boolean
+local function process_table(t)
+  local replace_keycodes = t.replace_keycodes == nil and true or t.replace_keycodes
+  local remap = t.remap == nil and false or t.remap
+  local mode = remap and 'm' or 'n'
+  return t.key, mode, replace_keycodes
+end
+
+local function handle_non_func_fallback(fallback, original_key)
+  if not fallback then
+    -- No fallback
+    logger.debug('All handlers declined for key', original_key, 'no fallback configured')
+  elseif fallback == true then
+    -- Fallback to default key
+    logger.debug('All handlers declined for key', original_key, 'falling back to default key')
+    u.feedkeys(original_key, 'n')
+  elseif type(fallback) == 'string' then
+    -- Fallback to the specified string
+    -- Note: String fallback always uses replace_keycodes=true for convenience.
+    -- Use table fallback if you need replace_keycodes=false.
+    logger.debug('All handlers declined for key', original_key, 'falling back with string:', fallback)
+    u.feedkeys(fallback, 'n')
+  elseif type(fallback) == 'table' then
+    -- Fallback to table with key and replace_keycodes
+    logger.debug('All handlers declined for key', original_key, 'falling back with table key:', fallback.key)
+    local key, mode, replace_keycodes = process_table(fallback)
+    u.feedkeys(key, mode, replace_keycodes)
+  end
+end
+
 --- @param key_spec MapLayer.MergedKeySpec
 --- @return MapLayer.HandlerFunc
 local function handler_wrap(key_spec)
@@ -178,39 +209,7 @@ local function handler_wrap(key_spec)
     end
     -- Handle fallback based on the fallback option
     local fallback = key_spec.fallback == nil and true or key_spec.fallback
-    if fallback == false then
-      -- No fallback
-      logger.debug('All handlers declined for key', key_spec.key, 'no fallback configured')
-      return
-    elseif fallback == true then
-      -- Fallback to default key
-      logger.debug('All handlers declined for key', key_spec.key, 'falling back to default key')
-      util.feedkeys(key_spec.key, 'n')
-    elseif type(fallback) == 'string' then
-      -- Fallback to the specified string
-      -- Note: String fallback always uses replace_keycodes=true for convenience.
-      -- Use table fallback if you need replace_keycodes=false.
-      logger.debug('All handlers declined for key', key_spec.key, 'falling back with string:', fallback)
-      util.feedkeys(fallback, 'n')
-    elseif type(fallback) == 'table' then
-      -- Fallback to table with key and replace_keycodes
-      if type(fallback.key) ~= 'string' then
-        logger.error(
-          'Fallback table missing or invalid "key" field for key',
-          key_spec.key,
-          '- expected string, got',
-          type(fallback.key)
-        )
-        return
-      end
-      logger.debug('All handlers declined for key', key_spec.key, 'falling back with table key:', fallback.key)
-      -- Default replace_keycodes to true if not specified
-      local replace_keycodes = fallback.replace_keycodes == nil and true or fallback.replace_keycodes
-      -- Default remap to false if not specified
-      local remap = fallback.remap == nil and false or fallback.remap
-      local mode = (remap and 'm' or 'n')
-      util.feedkeys(fallback.key, mode, replace_keycodes)
-    elseif type(fallback) == 'function' then
+    if type(fallback) == 'function' then
       -- Execute the function and handle the result
       logger.debug('All handlers declined for key', key_spec.key, 'executing fallback function')
       local success, result = pcall(fallback)
@@ -219,39 +218,9 @@ local function handler_wrap(key_spec)
         vim.notify('maplayer: fallback function error: ' .. tostring(result), vim.log.levels.ERROR)
         return
       end
-      if result == nil then
-        -- No fallback
-        logger.debug('Fallback function returned nil, no fallback')
-        return
-      elseif type(result) == 'string' then
-        -- Feedkeys the returned string
-        -- Note: String return always uses replace_keycodes=true for convenience.
-        -- Return a table if you need replace_keycodes=false.
-        logger.debug('Fallback function returned string:', result)
-        util.feedkeys(result, 'n', true)
-      elseif type(result) == 'table' then
-        -- Feedkeys with key and replace_keycodes from table
-        if type(result.key) ~= 'string' then
-          logger.error(
-            'Fallback function returned table with missing or invalid "key" field for key',
-            key_spec.key,
-            '- expected string, got',
-            type(result.key)
-          )
-          return
-        end
-        logger.debug('Fallback function returned table with key:', result.key)
-        -- Default replace_keycodes to true if not specified
-        local replace_keycodes = result.replace_keycodes == nil and true or result.replace_keycodes
-        -- Default remap to false if not specified
-        local remap = result.remap == nil and false or result.remap
-        local mode = (remap and 'm' or 'n')
-        util.feedkeys(result.key, mode, replace_keycodes)
-      else
-        -- Unexpected return type
-        logger.warn('Fallback function returned unexpected type:', type(result), 'for key', key_spec.key)
-      end
+      fallback = result
     end
+    handle_non_func_fallback(fallback, key_spec.key)
   end
 end
 

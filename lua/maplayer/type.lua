@@ -7,7 +7,7 @@
 --- @field replace_keycodes boolean Whether to replace keycodes
 --- @field remap? boolean Whether to allow remapping (default: false)
 
---- @alias MapLayer.FallbackFunc fun(): string|MapLayer.FallbackTable|nil
+--- @alias MapLayer.FallbackFunc fun(): string|MapLayer.FallbackTable|nil|boolean
 
 --- Fallback behavior when all handlers decline for a key.
 --- Can be one of the following:
