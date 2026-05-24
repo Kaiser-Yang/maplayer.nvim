@@ -46,6 +46,8 @@ end
 local function normalize_key(t)
   local parsed_t = {}
   for _, key_spec in ipairs(t) do
+    local condition_set = key_spec.condition ~= nil
+    local raw_handler = type(key_spec.handler) == 'string' and key_spec.handler or nil
     key_spec.key = lower_bracket(key_spec.key)
     --- @type string[]
     local mode_expanded = {}
@@ -91,6 +93,8 @@ local function normalize_key(t)
     for _, key in ipairs(key_spec.key) do
       local new_spec = vim.deepcopy(key_spec)
       new_spec.key = key
+      new_spec.condition_set = condition_set
+      new_spec.raw_handler = raw_handler
       new_spec.handler = condition_wrap(new_spec.condition, new_spec.handler, new_spec.key, new_spec.desc)
       table.insert(parsed_t, new_spec)
     end
@@ -141,6 +145,8 @@ local function normalize_key(t)
         remap = key_spec.remap or key_spec.noremap == false,
         replace_keycodes = key_spec.replace_keycodes,
         desc = key_spec.desc,
+        raw_handler = key_spec.raw_handler,
+        condition_set = key_spec.condition_set,
       })
     end
   end
@@ -186,6 +192,17 @@ local function handle_non_func_fallback(fallback, original_key)
     local key, mode, replace_keycodes = process_table(fallback)
     u.feedkeys(key, mode, replace_keycodes)
   end
+end
+
+--- @param key_spec MapLayer.MergedKeySpec
+--- @return string|nil, boolean|nil
+local function direct_rhs(key_spec)
+  if key_spec.expr then return end
+  if #key_spec.handler ~= 1 then return end
+  local only = key_spec.handler[1]
+  if only.raw_handler == nil or only.condition_set then return end
+  if only.replace_keycodes == false then return end
+  return only.raw_handler, only.remap
 end
 
 --- @param key_spec MapLayer.MergedKeySpec
@@ -243,11 +260,20 @@ function M.make(opt)
       assert(key == key_spec.key)
       assert(mode == key_spec.mode)
       logger.debug('Registering key binding:', key, 'mode:', mode, 'descriptions:', key_spec.desc)
+      local rhs
+      local opts = generate_opt(key_spec)
+      local direct, remap = direct_rhs(key_spec)
+      if direct then
+        rhs = direct
+        if remap then opts.remap = true end
+      else
+        rhs = handler_wrap(key_spec)
+      end
       table.insert(res, {
         mode = mode,
         lhs = key,
-        rhs = handler_wrap(key_spec),
-        opts = generate_opt(key_spec),
+        rhs = rhs,
+        opts = opts,
       })
     end
   end

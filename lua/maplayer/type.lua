@@ -43,6 +43,8 @@
 --- @field remap boolean
 --- @field replace_keycodes boolean
 --- @field desc string Original description for debugging
+--- @field raw_handler? string Original string handler for direct rhs mapping
+--- @field condition_set boolean Whether the original condition was provided
 
 --- @class MapLayer.MergedKeySpec
 --- @field key string
@@ -56,5 +58,5 @@
 --- @class MapLayer.MapSetArg
 --- @field mode string[]
 --- @field lhs string
---- @field rhs function
+--- @field rhs string|function
 --- @field opts vim.keymap.set.Opts
