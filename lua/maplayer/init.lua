@@ -54,16 +54,20 @@ local function normalize_key(t)
     for _, mode in ipairs(u.ensure_list(key_spec.mode or 'n')) do
       assert(type(mode) == 'string')
       if mode == '' then mode = 'nxso' end
-      for _, m in ipairs(vim.split(mode, '')) do
-        local res
+      for i, m in ipairs(vim.split(mode, '')) do
+        local res = {}
         if m == 'v' then
           res = { 's', 'x' }
+        elseif m == 'a' then
+          -- Do nothing, we should haved handled
         elseif m == '!' then
           res = { 'i', 'c' }
         else
           res = { m }
         end
+        local nex = #mode:sub(i + 1, i + 1)
         for _, mm in ipairs(res) do
+          if nex == 'a' then mm = mm .. nex end
           if not vim.tbl_contains(mode_expanded, mm) then table.insert(mode_expanded, mm) end
         end
       end
