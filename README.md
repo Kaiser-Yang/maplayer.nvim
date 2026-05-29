@@ -638,7 +638,7 @@ vim.api.nvim_create_autocmd('FileType', {
   callback = function(args)
     for _, spec in ipairs(markdown_maps) do
       -- Clear the buffer field if it exists in opts
-      local opts = vim.tbl_extend('force', spec.opts, { buffer = args.buf })
+      local opts = vim.tbl_deep_extend('force', spec.opts, { buffer = args.buf })
       vim.keymap.set(spec.mode, spec.lhs, spec.rhs, opts)
     end
   end,
