@@ -40,7 +40,7 @@ local function condition_wrap(condition, handler, key, desc)
   end
 end
 
---- Normalise keys in a KeySpec, making sure '<C-A>' and '<c-a>' are treated the same.
+--- Normalize keys in a KeySpec, making sure '<C-A>' and '<c-a>' are treated the same.
 --- @param t MapLayer.KeySpec[]
 --- @return table<string, table<string, MapLayer.MergedKeySpec>>
 local function normalize_key(t)
@@ -94,67 +94,67 @@ local function normalize_key(t)
       ---@diagnostic disable-next-line: return-type-mismatch
       key_spec.handler = function() return value end
     end
+    assert(type(key_spec.key) == 'table')
+    assert(type(key_spec.mode) == 'table')
+    ---@diagnostic disable-next-line: param-type-mismatch
     for _, key in ipairs(key_spec.key) do
-      local new_spec = vim.deepcopy(key_spec)
-      new_spec.key = key
-      new_spec.condition_set = condition_set
-      new_spec.raw_handler = raw_handler
-      new_spec.handler = condition_wrap(new_spec.condition, new_spec.handler, new_spec.key, new_spec.desc)
-      table.insert(parsed_t, new_spec)
+      ---@diagnostic disable-next-line: param-type-mismatch
+      for _, m in ipairs(key_spec.mode) do
+        local new_spec = vim.deepcopy(key_spec)
+        new_spec.key = key
+        new_spec.mode = m
+        new_spec.condition_set = condition_set
+        new_spec.raw_handler = raw_handler
+        new_spec.handler = condition_wrap(new_spec.condition, new_spec.handler, new_spec.key, new_spec.desc)
+        table.insert(parsed_t, new_spec)
+      end
     end
   end
   t = parsed_t
-  for idx, key_spec in ipairs(t) do
-    -- NOTE: Add idx here to make "sort" stable
-    key_spec.priority = key_spec.priority + (#t - idx)
-  end
   table.sort(t, function(a, b)
     if a.key ~= b.key then return a.key < b.key end
+    if a.mode ~= b.mode then return a.mode < b.mode end
     return a.priority > b.priority
   end)
   --- @type table<string, table<string, MapLayer.MergedKeySpec>>
   local res = {} -- temp[mode][key] = MergedKeySpec
   for _, key_spec in ipairs(t) do
-    local mode = key_spec.mode
-    assert(type(mode) == 'table')
+    local m = key_spec.mode
+    assert(type(m) == 'string')
     assert(type(key_spec.handler) == 'function')
-    for _, m in ipairs(mode) do
-      assert(type(m) == 'string')
-      if not res[m] then res[m] = {} end
-      --- @type table<string, MapLayer.MergedKeySpec>
-      local tmp = res[m]
-      local key = key_spec.key
-      if not tmp[key] then
-        -- Initialize entry for this key
-        tmp[key] = {
-          key = key,
-          mode = m,
-          desc = {},
-          handler = {},
-          fallback = key_spec.fallback,
-          expr = key_spec.expr,
-          buffer = key_spec.buffer,
-        }
-      else
-        -- Update fallback if current entry has no fallback but this handler does
-        if tmp[key].fallback == nil and key_spec.fallback ~= nil then tmp[key].fallback = key_spec.fallback end
-        if tmp[key].expr == nil and key_spec.expr ~= nil then tmp[key].expr = key_spec.expr end
-        if tmp[key].buffer == nil and key_spec.buffer ~= nil then tmp[key].buffer = key_spec.buffer end
-      end
-      assert(key == tmp[key].key)
-      assert(m == tmp[key].mode)
-      if not vim.tbl_contains(tmp[key].desc, key_spec.desc) then table.insert(tmp[key].desc, key_spec.desc) end
-      table.insert(tmp[key].handler, {
-        handler = key_spec.handler,
-        remap = key_spec.remap or key_spec.noremap == false,
-        replace_keycodes = key_spec.replace_keycodes,
-        desc = key_spec.desc,
-        raw_handler = key_spec.raw_handler,
-        condition_set = key_spec.condition_set,
-      })
+    if not res[m] then res[m] = {} end
+    --- @type table<string, MapLayer.MergedKeySpec>
+    local tmp = res[m]
+    local key = key_spec.key
+    if not tmp[key] then
+      -- Initialize entry for this key
+      tmp[key] = {
+        key = key,
+        mode = m,
+        desc = {},
+        handler = {},
+        fallback = key_spec.fallback,
+        expr = key_spec.expr,
+        buffer = key_spec.buffer,
+      }
+    else
+      -- Update fallback if current entry has no fallback but this handler does
+      if tmp[key].fallback == nil and key_spec.fallback ~= nil then tmp[key].fallback = key_spec.fallback end
+      if tmp[key].expr == nil and key_spec.expr ~= nil then tmp[key].expr = key_spec.expr end
+      if tmp[key].buffer == nil and key_spec.buffer ~= nil then tmp[key].buffer = key_spec.buffer end
     end
+    assert(key == tmp[key].key)
+    assert(m == tmp[key].mode)
+    if not vim.tbl_contains(tmp[key].desc, key_spec.desc) then table.insert(tmp[key].desc, key_spec.desc) end
+    table.insert(tmp[key].handler, {
+      handler = key_spec.handler,
+      remap = key_spec.remap or key_spec.noremap == false,
+      replace_keycodes = key_spec.replace_keycodes,
+      desc = key_spec.desc,
+      raw_handler = key_spec.raw_handler,
+      condition_set = key_spec.condition_set,
+    })
   end
-
   return res
 end
 --- @param key_spec MapLayer.MergedKeySpec
