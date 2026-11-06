@@ -192,10 +192,29 @@ Each keybinding specification is a table with the following fields:
 | `priority` | `number` | `0` | Higher priority handlers are evaluated first |
 | `noremap` | `boolean` | `true` | Whether to use non-recursive mapping |
 | `remap` | `boolean` | `false` | Whether to allow remapping (opposite of `noremap`) |
+| `expr` | `boolean` | `false` | Register an expression mapping |
+| `direct` | `boolean` | `false` | Return expression results directly instead of feeding keys; requires `expr = true`, one handler per key/mode, and no fallback |
 | `replace_keycodes` | `boolean` | `true` | Whether to replace keycodes in returned strings |
 | `fallback` | `boolean \| string \| table \| function` | `true` | Controls fallback behavior when all handlers decline (see [Fallback Behavior](#fallback-behavior)) |
 
 ### Handler Return Values
+
+For count editing and other expression mappings that must stay in Neovim's input parser,
+use `expr = true, direct = true`. The single handler returns the replacement key string
+or an empty string for no action. Non-string results also produce no action. Conditions,
+`remap`, and `replace_keycodes` remain supported.
+
+For example, Backspace can remove the last count digit without moving the cursor otherwise:
+
+```lua
+{
+  key = '<BS>',
+  mode = 'nx',
+  expr = true,
+  direct = true,
+  handler = function() return vim.v.count > 0 and '<Del>' or '' end,
+}
+```
 
 The `handler` function's return value determines what happens next:
 
@@ -747,6 +766,13 @@ When you press a key:
 - If no handler succeeds, the original key is fed back (fallback)
 
 ## Contributing
+
+Run the expression-mapping regression tests from the repository root:
+
+```sh
+nvim --headless -u NONE -i NONE -n -c 'luafile tests/direct.lua'
+stylua --check lua tests
+```
 
 Contributions are welcome! Please feel free to submit issues or pull requests.
 

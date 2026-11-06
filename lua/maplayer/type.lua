@@ -26,6 +26,7 @@
 --- @field noremap? boolean Default to true
 --- @field remap? boolean Default to false
 --- @field expr? boolean Default to false
+--- @field direct? boolean Return expression results directly. Requires expr=true, one handler, and no fallback
 --- @field buffer? boolean Default to false. When true, the mapping is buffer-local
 --- @field replace_keycodes? boolean Default to true
 --- @field fallback? MapLayer.Fallback Default to false. Controls fallback behavior when all handlers decline
@@ -51,6 +52,7 @@
 --- @field mode string
 --- @field desc string[]
 --- @field expr? boolean
+--- @field direct? boolean
 --- @field buffer? boolean
 --- @field handler MapLayer.MergedHandlerFunc[]
 --- @field fallback? MapLayer.Fallback The fallback option (uses the one from the highest priority handler)

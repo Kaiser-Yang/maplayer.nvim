@@ -135,9 +135,12 @@ local function normalize_key(t)
         handler = {},
         fallback = key_spec.fallback,
         expr = key_spec.expr,
+        direct = key_spec.direct,
         buffer = key_spec.buffer,
       }
     else
+      -- A direct entry must not silently become a layered mapping due to priority.
+      tmp[key].direct = tmp[key].direct or key_spec.direct
       -- Update fallback if current entry has no fallback but this handler does
       if tmp[key].fallback == nil and key_spec.fallback ~= nil then tmp[key].fallback = key_spec.fallback end
       if tmp[key].expr == nil and key_spec.expr ~= nil then tmp[key].expr = key_spec.expr end
@@ -199,8 +202,20 @@ local function handle_non_func_fallback(fallback, original_key)
 end
 
 --- @param key_spec MapLayer.MergedKeySpec
---- @return string|nil, boolean|nil
+--- @return string|function|nil, boolean|nil, boolean|nil
 local function direct_rhs(key_spec)
+  if key_spec.direct then
+    assert(key_spec.expr, 'direct mappings require expr = true')
+    assert(#key_spec.handler == 1, 'direct mappings require a single handler per key and mode')
+    assert(not key_spec.fallback, 'direct mappings do not support fallback')
+    local only = key_spec.handler[1]
+    return function()
+      local result = only.handler()
+      return type(result) == 'string' and result or ''
+    end,
+      only.remap,
+      only.replace_keycodes
+  end
   if key_spec.expr then return end
   if #key_spec.handler ~= 1 then return end
   local only = key_spec.handler[1]
@@ -266,10 +281,11 @@ function M.make(opt)
       logger.debug('Registering key binding:', key, 'mode:', mode, 'descriptions:', key_spec.desc)
       local rhs
       local opts = generate_opt(key_spec)
-      local direct, remap = direct_rhs(key_spec)
+      local direct, remap, replace_keycodes = direct_rhs(key_spec)
       if direct then
         rhs = direct
         if remap then opts.remap = true end
+        if opts.expr then opts.replace_keycodes = replace_keycodes end
       else
         rhs = handler_wrap(key_spec)
       end

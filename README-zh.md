@@ -192,10 +192,28 @@ end
 | `priority` | `number` | `0` | 优先级高的处理器先评估 |
 | `noremap` | `boolean` | `true` | 是否使用非递归映射 |
 | `remap` | `boolean` | `false` | 是否允许重新映射（与 `noremap` 相反） |
+| `expr` | `boolean` | `false` | 注册表达式映射 |
+| `direct` | `boolean` | `false` | 直接返回表达式结果，不重新发送按键；要求 `expr = true`、每个按键和模式只有一个处理器且不设置回退 |
 | `replace_keycodes` | `boolean` | `true` | 是否替换返回字符串中的键码 |
 | `fallback` | `boolean \| string \| table \| function` | `true` | 控制所有处理器拒绝时的回退行为（见[回退行为](#回退行为)） |
 
 ### 处理器返回值
+
+计数编辑等需要在 Neovim 输入解析过程中处理的绑定，可以设置 `expr = true, direct = true`。
+单个处理器直接返回替换按键的字符串，返回空字符串或非字符串表示不执行操作。
+仍然支持条件、`remap` 和 `replace_keycodes`。
+
+例如，让 Backspace 删除计数的最后一位，在没有计数时不移动光标：
+
+```lua
+{
+  key = '<BS>',
+  mode = 'nx',
+  expr = true,
+  direct = true,
+  handler = function() return vim.v.count > 0 and '<Del>' or '' end,
+}
+```
 
 `handler` 函数的返回值决定接下来会发生什么：
 
@@ -747,6 +765,13 @@ require('maplayer').setup({
 - 如果没有处理器成功，则回退原始按键（回退）
 
 ## 贡献
+
+在仓库根目录运行表达式映射回归测试：
+
+```sh
+nvim --headless -u NONE -i NONE -n -c 'luafile tests/direct.lua'
+stylua --check lua tests
+```
 
 欢迎贡献！请随时提交问题或拉取请求。
 
