@@ -61,18 +61,30 @@ end
 
 --- Log a debug message
 --- @param ... any Message parts
-function M.debug(...) _write(M.levels.DEBUG, format_message('DEBUG', ...)) end
+function M.debug(...)
+  if not should_log(M.levels.DEBUG) then return end
+  _write(M.levels.DEBUG, format_message('DEBUG', ...))
+end
 
 --- Log an info message
 --- @param ... any Message parts
-function M.info(...) _write(M.levels.INFO, format_message('INFO', ...)) end
+function M.info(...)
+  if not should_log(M.levels.INFO) then return end
+  _write(M.levels.INFO, format_message('INFO', ...))
+end
 
 --- Log a warning message
 --- @param ... any Message parts
-function M.warn(...) _write(M.levels.WARN, format_message('WARN', ...)) end
+function M.warn(...)
+  if not should_log(M.levels.WARN) then return end
+  _write(M.levels.WARN, format_message('WARN', ...))
+end
 
 --- Log an error message
 --- @param ... any Message parts
-function M.error(...) _write(M.levels.ERROR, format_message('ERROR', ...)) end
+function M.error(...)
+  if not should_log(M.levels.ERROR) then return end
+  _write(M.levels.ERROR, format_message('ERROR', ...))
+end
 
 return M

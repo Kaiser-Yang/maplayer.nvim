@@ -771,6 +771,7 @@ Run the expression-mapping regression tests from the repository root:
 
 ```sh
 nvim --headless -u NONE -i NONE -n -c 'luafile tests/direct.lua'
+nvim --headless -u NONE -i NONE -n -c 'luafile tests/logger.lua'
 stylua --check lua tests
 ```
 

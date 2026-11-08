@@ -770,6 +770,7 @@ require('maplayer').setup({
 
 ```sh
 nvim --headless -u NONE -i NONE -n -c 'luafile tests/direct.lua'
+nvim --headless -u NONE -i NONE -n -c 'luafile tests/logger.lua'
 stylua --check lua tests
 ```
 
